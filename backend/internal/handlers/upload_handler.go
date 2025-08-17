@@ -76,5 +76,5 @@ func (h *UploadHandler) UploadFile(c *fiber.Ctx) error {
 		zap.String("boardId", boardID.String()),
 		zap.String("url", publicURL))
 
-	return c.Status(fiber.StatusCreated).JSON(response)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"data": response})
 }

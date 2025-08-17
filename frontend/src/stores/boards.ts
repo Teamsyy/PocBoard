@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { boardsApi, pagesApi } from '@/api'
 import type { Board, Page } from '@/types'
 
@@ -12,9 +12,20 @@ export const useBoardsStore = defineStore('boards', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // Watch pages to ensure it's always an array
+  watch(pages, (newPages: any) => {
+    if (!Array.isArray(newPages)) {
+      console.warn('Pages was set to non-array value:', newPages, 'resetting to empty array')
+      pages.value = []
+    }
+  }, { immediate: true })
+
   // Getters
   const isEditMode = computed(() => !!editToken.value)
-  const sortedPages = computed(() => (pages.value || []).slice().sort((a, b) => a.orderIdx - b.orderIdx))
+  const sortedPages = computed(() => {
+    const pagesArray = Array.isArray(pages.value) ? pages.value : []
+    return pagesArray.slice().sort((a, b) => a.orderIdx - b.orderIdx)
+  })
 
   // Actions
   const setTokensFromUrl = () => {
@@ -69,13 +80,13 @@ export const useBoardsStore = defineStore('boards', () => {
 
       currentBoard.value = board
 
-      // Initialize pages array
+      // Always initialize pages as empty array first
       pages.value = []
+      console.log('Initialized pages as empty array')
 
-      // Load pages if board has them
-      if (board.pages && Array.isArray(board.pages)) {
-        pages.value = board.pages
-      } else if (editToken.value || publicToken.value) {
+      // Load pages from API (they should come empty for new boards)
+      if (editToken.value || publicToken.value) {
+        console.log('Loading pages from API...')
         await loadPages()
       }
     } catch (err: any) {
@@ -113,10 +124,17 @@ export const useBoardsStore = defineStore('boards', () => {
     }
 
     try {
+      console.log('Loading pages for board:', currentBoard.value.id)
       const loadedPages = await pagesApi.list(currentBoard.value.id)
-      pages.value = loadedPages || []
-      return loadedPages || []
+      console.log('Pages loaded:', loadedPages)
+      
+      // Ensure pages is always an array
+      pages.value = Array.isArray(loadedPages) ? loadedPages : []
+      console.log('Pages set to:', pages.value)
+      
+      return pages.value
     } catch (err: any) {
+      console.error('Failed to load pages:', err)
       error.value = err.error?.message || 'Failed to load pages'
       pages.value = [] // Ensure pages is always an array
       throw err
@@ -128,9 +146,16 @@ export const useBoardsStore = defineStore('boards', () => {
       throw new Error('No board loaded or edit access required')
     }
 
-    const finalOrderIdx = orderIdx ?? (pages.value || []).length
+    // Ensure pages is an array before accessing it
+    if (!Array.isArray(pages.value)) {
+      pages.value = []
+    }
+
+    const finalOrderIdx = orderIdx ?? pages.value.length
 
     try {
+      console.log('Creating page:', { title, date, orderIdx: finalOrderIdx })
+      
       // Convert date string to ISO format for backend
       const dateObj = new Date(date + 'T00:00:00.000Z')
       
@@ -140,12 +165,18 @@ export const useBoardsStore = defineStore('boards', () => {
         orderIdx: finalOrderIdx,
       })
 
-      if (!pages.value) {
+      console.log('Page created:', newPage)
+      
+      // Ensure pages is still an array before pushing
+      if (!Array.isArray(pages.value)) {
         pages.value = []
       }
       pages.value.push(newPage)
+      
+      console.log('Pages after creation:', pages.value)
       return newPage
     } catch (err: any) {
+      console.error('Failed to create page:', err)
       error.value = err.error?.message || 'Failed to create page'
       throw err
     }

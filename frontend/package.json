@@ -11,6 +11,7 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@heroicons/vue": "^2.2.0",
     "axios": "^1.6.2",
     "dayjs": "^1.11.10",
     "fabric": "^5.3.0",

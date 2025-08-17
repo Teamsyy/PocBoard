@@ -123,6 +123,14 @@
       </div>
     </header>
 
+    <!-- Toolbar -->
+    <Toolbar 
+      :is-edit-mode="isEditMode"
+      @add-text="addTextElement"
+      @add-shape="addShapeElement"
+      @add-sticker="addStickerElement"
+    />
+
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden">
       <!-- Left Sidebar -->
@@ -145,16 +153,10 @@
               Add Text
             </button>
             
-            <button 
-              @click="addImageElement"
-              class="w-full btn-ghost justify-start"
-              :disabled="!isEditMode"
-            >
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Add Image
-            </button>
+            <!-- Image Upload Component -->
+            <div class="w-full">
+              <ImageUploader :auto-create="true" variant="sidebar" />
+            </div>
             
             <button 
               @click="addShapeElement"
@@ -271,6 +273,11 @@
           </div>
         </div>
       </main>
+
+      <!-- Right Sidebar - Layers -->
+      <aside v-if="isEditMode" class="w-64 flex-shrink-0 bg-white border-l border-gray-200 hidden lg:block">
+        <SidebarLayers />
+      </aside>
     </div>
 
     <!-- Mobile Sidebar Overlay -->
@@ -308,16 +315,10 @@
               Add Text
             </button>
             
-            <button 
-              @click="addImageElement"
-              class="w-full btn-ghost justify-start"
-              :disabled="!isEditMode"
-            >
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z" />
-              </svg>
-              Add Image
-            </button>
+            <!-- Mobile Image Upload Component -->
+            <div class="w-full">
+              <ImageUploader :auto-create="true" variant="sidebar" />
+            </div>
             
             <button 
               @click="addShapeElement"
@@ -436,11 +437,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBoardsStore } from '@/stores/boards'
 import { useEditorStore } from '@/stores/editor'
-import { CanvasEditor } from '@/components'
+import { CanvasEditor, Toolbar, SidebarLayers, ImageUploader } from '@/components'
 import type { Theme } from '@/types'
 
 interface Props {
@@ -523,6 +524,12 @@ const loadBoard = async () => {
     if (boardsStore.sortedPages.length === 0 && boardsStore.isEditMode) {
       console.log('Creating default page...')
       try {
+        // Ensure pages array is properly initialized
+        if (!Array.isArray(boardsStore.pages)) {
+          console.log('Pages not properly initialized, reinitializing...')
+          boardsStore.pages = []
+        }
+        
         const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
         const newPage = await boardsStore.createPage('Page 1', today, 0)
         console.log('Default page created:', newPage.id)
@@ -536,6 +543,14 @@ const loadBoard = async () => {
       console.log('Switching to first page')
       currentPageIndex.value = 0
       await switchToPage()
+      
+      // Double-check that the page was selected
+      if (!editorStore.currentPageId) {
+        console.log('Page selection failed, trying again')
+        const firstPage = boardsStore.sortedPages[0]
+        editorStore.setCurrentPage(firstPage.id)
+        await editorStore.loadPageElements(firstPage.id)
+      }
     } else {
       console.warn('No pages available after board load')
     }
@@ -561,8 +576,12 @@ const nextPage = () => {
 const switchToPage = async () => {
   const page = boardsStore.sortedPages[currentPageIndex.value]
   if (page) {
+    console.log('Switching to page:', page.id)
     editorStore.setCurrentPage(page.id)
     await editorStore.loadPageElements(page.id)
+    
+    // The watchers will handle canvas reload automatically
+    await nextTick()
   }
 }
 
@@ -570,17 +589,6 @@ const switchToPage = async () => {
 const addTextElement = () => {
   if (!isEditMode.value || !canvasEditor.value) return
   canvasEditor.value.addTextElement()
-  showMobileSidebar.value = false
-}
-
-const addImageElement = () => {
-  if (!isEditMode.value) return
-  // For now, we'll add a placeholder image
-  // In later tasks, this will open an image upload dialog
-  const placeholderUrl = 'https://via.placeholder.com/200x200/3B82F6/FFFFFF?text=Image'
-  if (canvasEditor.value) {
-    canvasEditor.value.addImageElement(placeholderUrl, 100, 100, 200, 200)
-  }
   showMobileSidebar.value = false
 }
 
@@ -626,6 +634,21 @@ const exportPage = () => {
 // Watch for route changes
 watch(() => route.query.edit_token, () => {
   loadBoard()
+})
+
+// Watch for canvas editor availability and ensure elements are loaded
+watch(() => canvasEditor.value, async (newCanvas) => {
+  if (newCanvas && editorStore.currentPageId) {
+    console.log('Canvas editor is now available, ensuring elements are loaded')
+    await nextTick()
+    // Only trigger reload if canvas is not already loading elements
+    setTimeout(() => {
+      if (editorStore.elements.length === 0) {
+        const event = new CustomEvent('editor:reload-elements')
+        window.dispatchEvent(event)
+      }
+    }, 50)
+  }
 })
 
 // Initialize

@@ -78,8 +78,12 @@ func (s *UploadService) SaveFile(fileHeader *multipart.FileHeader, boardID uuid.
 		return "", fmt.Errorf("failed to save file: %w", err)
 	}
 
-	// Return the public URL path
-	publicURL := fmt.Sprintf("/uploads/boards/%s/%s", boardID.String(), fileName)
+	// Return the full public URL with backend host
+	backendURL := os.Getenv("BACKEND_URL")
+	if backendURL == "" {
+		backendURL = "http://localhost:8080" // Default backend URL
+	}
+	publicURL := fmt.Sprintf("%s/uploads/boards/%s/%s", backendURL, boardID.String(), fileName)
 	return publicURL, nil
 }
 

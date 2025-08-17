@@ -108,7 +108,7 @@
   - Add Delete key handling for element removal
   - _Requirements: 3.1, 3.2, 3.5, 4.5_
 
-- [ ] 14. Implement canvas editing tools and controls
+- [x] 14. Implement canvas editing tools and controls
 
   - Create Toolbar.vue component with element creation buttons
   - Add text styling controls (font family, size, color, bold, italic)
@@ -117,7 +117,7 @@
   - Create undo/redo functionality with client-side history stack
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 15. Build element management and layers sidebar
+- [x] 15. Build element management and layers sidebar
 
   - Create SidebarLayers.vue component with element hierarchy display
   - Implement element selection from sidebar
@@ -133,7 +133,7 @@
   - Create theme persistence and loading from server
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 17. Build image upload functionality
+- [x] 17. Build image upload functionality
 
   - Create ImageUploader.vue component with drag-and-drop interface
   - Implement file selection and upload progress indication

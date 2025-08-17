@@ -18,7 +18,8 @@ export const useEditorStore = defineStore('editor', () => {
 
   // Constants
   const MAX_HISTORY_SIZE = 50
-  const DEBOUNCE_DELAY = 300
+  const DEBOUNCE_DELAY = 300 // Default debounce
+  const POSITION_DEBOUNCE_DELAY = 1000 // Longer delay for position/size changes
 
   // Getters
   const selectedElements = computed(() => 
@@ -32,17 +33,40 @@ export const useEditorStore = defineStore('editor', () => {
     [...elements.value].sort((a, b) => a.z - b.z)
   )
 
-  // Debounced save function
+  // Store for debounced saves
   let saveTimeout: NodeJS.Timeout | null = null
+  const positionSaveTimeouts: Map<string, NodeJS.Timeout> = new Map()
   
-  const debouncedSave = (element: Element) => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout)
-    }
+  const debouncedSave = (element: Element, isPositionUpdate = false) => {
+    const delay = isPositionUpdate ? POSITION_DEBOUNCE_DELAY : DEBOUNCE_DELAY
     
-    saveTimeout = setTimeout(async () => {
-      await saveElement(element)
-    }, DEBOUNCE_DELAY)
+    if (isPositionUpdate) {
+      // Handle position updates per element with longer delay
+      const elementId = element.id
+      const existingTimeout = positionSaveTimeouts.get(elementId)
+      
+      if (existingTimeout) {
+        clearTimeout(existingTimeout)
+      }
+      
+      const timeout = setTimeout(async () => {
+        console.log('Saving position update for element:', elementId)
+        await saveElement(element)
+        positionSaveTimeouts.delete(elementId)
+      }, delay)
+      
+      positionSaveTimeouts.set(elementId, timeout)
+    } else {
+      // Handle immediate updates (text changes, style changes, etc.)
+      if (saveTimeout) {
+        clearTimeout(saveTimeout)
+      }
+      
+      saveTimeout = setTimeout(async () => {
+        console.log('Saving immediate update for element:', element.id)
+        await saveElement(element)
+      }, delay)
+    }
   }
 
   // Actions
@@ -69,6 +93,19 @@ export const useEditorStore = defineStore('editor', () => {
 
   const selectElements = (elementIds: string[]) => {
     selectedElementIds.value = elementIds
+  }
+
+  const selectElement = (elementId: string) => {
+    selectedElementIds.value = [elementId]
+  }
+
+  const toggleElementSelection = (elementId: string) => {
+    const index = selectedElementIds.value.indexOf(elementId)
+    if (index > -1) {
+      selectedElementIds.value.splice(index, 1)
+    } else {
+      selectedElementIds.value.push(elementId)
+    }
   }
 
   const clearSelection = () => {
@@ -106,10 +143,11 @@ export const useEditorStore = defineStore('editor', () => {
     const previousState = undoStack.value.pop()!
     elements.value = previousState.elements
     
-    // Update canvas if available
+    // Trigger canvas reload if available
     if (canvas.value) {
-      // Canvas update logic would go here
-      canvas.value.renderAll()
+      // Emit event to trigger canvas reload
+      const event = new CustomEvent('editor:reload-elements')
+      window.dispatchEvent(event)
     }
   }
 
@@ -127,10 +165,11 @@ export const useEditorStore = defineStore('editor', () => {
     const nextState = redoStack.value.pop()!
     elements.value = nextState.elements
     
-    // Update canvas if available
+    // Trigger canvas reload if available
     if (canvas.value) {
-      // Canvas update logic would go here
-      canvas.value.renderAll()
+      // Emit event to trigger canvas reload
+      const event = new CustomEvent('editor:reload-elements')
+      window.dispatchEvent(event)
     }
   }
 
@@ -188,8 +227,11 @@ export const useEditorStore = defineStore('editor', () => {
     const index = elements.value.findIndex(el => el.id === elementId)
     elements.value[index] = { ...element, ...updates }
 
-    // Debounce API call
-    debouncedSave(elements.value[index])
+    // Check if this is a position/size update
+    const isPositionUpdate = 'x' in updates || 'y' in updates || 'w' in updates || 'h' in updates || 'rotation' in updates
+    
+    // Debounce API call with appropriate delay
+    debouncedSave(elements.value[index], isPositionUpdate)
   }
 
   const saveElement = async (element: Element) => {
@@ -307,8 +349,159 @@ export const useEditorStore = defineStore('editor', () => {
     snapToGrid.value = !snapToGrid.value
   }
 
+  // Text styling methods
+  const updateSelectedElementsStyle = (property: string, value: any) => {
+    if (selectedElementIds.value.length === 0) return
+    
+    selectedElementIds.value.forEach(async (elementId) => {
+      const element = elements.value.find(el => el.id === elementId)
+      if (element && element.kind === 'text') {
+        // Save canvas state before modification
+        saveCanvasState()
+        
+        // Update element payload
+        const payload = element.payload as any
+        payload[property] = value
+        
+        // Update in store
+        await updateElement(element.id, {
+          payload: payload
+        })
+        
+        // Update fabric object if canvas is available
+        if (canvas.value) {
+          const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
+          if (fabricObject) {
+            fabricObject.set(property, value)
+            canvas.value.renderAll()
+          }
+        }
+      }
+    })
+  }
+
+  // Z-order methods
+  const bringToFront = () => {
+    if (selectedElementIds.value.length === 0) return
+    
+    saveCanvasState()
+    
+    selectedElementIds.value.forEach(async (elementId) => {
+      const element = elements.value.find(el => el.id === elementId)
+      if (element) {
+        const maxZ = Math.max(...elements.value.map(el => el.z))
+        await updateElement(element.id, { z: maxZ + 1 })
+        
+        // Update fabric object
+        if (canvas.value) {
+          const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
+          if (fabricObject) {
+            canvas.value.bringToFront(fabricObject)
+          }
+        }
+      }
+    })
+  }
+
+  const bringForward = () => {
+    if (selectedElementIds.value.length === 0) return
+    
+    saveCanvasState()
+    
+    selectedElementIds.value.forEach(async (elementId) => {
+      const element = elements.value.find(el => el.id === elementId)
+      if (element) {
+        const higherElements = elements.value.filter(el => el.z > element.z)
+        if (higherElements.length > 0) {
+          const nextZ = Math.min(...higherElements.map(el => el.z))
+          await updateElement(element.id, { z: nextZ + 1 })
+          
+          // Update fabric object
+          if (canvas.value) {
+            const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
+            if (fabricObject) {
+              canvas.value.bringForward(fabricObject)
+            }
+          }
+        }
+      }
+    })
+  }
+
+  const sendBackward = () => {
+    if (selectedElementIds.value.length === 0) return
+    
+    saveCanvasState()
+    
+    selectedElementIds.value.forEach(async (elementId) => {
+      const element = elements.value.find(el => el.id === elementId)
+      if (element) {
+        const lowerElements = elements.value.filter(el => el.z < element.z)
+        if (lowerElements.length > 0) {
+          const prevZ = Math.max(...lowerElements.map(el => el.z))
+          await updateElement(element.id, { z: prevZ - 1 })
+          
+          // Update fabric object
+          if (canvas.value) {
+            const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
+            if (fabricObject) {
+              canvas.value.sendBackwards(fabricObject)
+            }
+          }
+        }
+      }
+    })
+  }
+
+  const sendToBack = () => {
+    if (selectedElementIds.value.length === 0) return
+    
+    saveCanvasState()
+    
+    selectedElementIds.value.forEach(async (elementId) => {
+      const element = elements.value.find(el => el.id === elementId)
+      if (element) {
+        const minZ = Math.min(...elements.value.map(el => el.z))
+        await updateElement(element.id, { z: minZ - 1 })
+        
+        // Update fabric object
+        if (canvas.value) {
+          const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
+          if (fabricObject) {
+            canvas.value.sendToBack(fabricObject)
+          }
+        }
+      }
+    })
+  }
+
   const clearError = () => {
     error.value = null
+  }
+
+  const setElementVisibility = (elementId: string, visible: boolean) => {
+    if (canvas.value) {
+      const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
+      if (fabricObject) {
+        fabricObject.visible = visible
+        canvas.value.renderAll()
+      }
+    }
+  }
+
+  const setElementLocked = (elementId: string, locked: boolean) => {
+    if (canvas.value) {
+      const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
+      if (fabricObject) {
+        fabricObject.selectable = !locked
+        fabricObject.evented = !locked
+        canvas.value.renderAll()
+      }
+    }
+  }
+
+  const deleteElement = async (elementId: string) => {
+    await deleteElements([elementId])
   }
 
   const reset = () => {
@@ -350,6 +543,8 @@ export const useEditorStore = defineStore('editor', () => {
     setCurrentPage,
     loadPageElements,
     selectElements,
+    selectElement,
+    toggleElementSelection,
     clearSelection,
     saveCanvasState,
     undo,
@@ -357,9 +552,17 @@ export const useEditorStore = defineStore('editor', () => {
     createElement,
     updateElement,
     deleteElements,
+    deleteElement,
     reorderElements,
     uploadImage,
     toggleSnapToGrid,
+    updateSelectedElementsStyle,
+    setElementVisibility,
+    setElementLocked,
+    bringToFront,
+    bringForward,
+    sendBackward,
+    sendToBack,
     clearError,
     reset,
   }

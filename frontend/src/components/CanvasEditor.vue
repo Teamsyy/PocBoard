@@ -91,9 +91,14 @@ const GRID_SIZE = 8
 const MIN_ELEMENT_SIZE = 16
 
 // Canvas initialization
-const initializeCanvas = () => {
-  if (!canvasElement.value) return
+const initializeCanvas = async () => {
+  if (!canvasElement.value) {
+    console.log('Canvas element not ready, waiting...')
+    await nextTick()
+    if (!canvasElement.value) return
+  }
 
+  console.log('Initializing canvas...')
   fabricCanvas.value = new fabric.Canvas(canvasElement.value, {
     width: canvasWidth.value,
     height: canvasHeight.value,
@@ -112,8 +117,11 @@ const initializeCanvas = () => {
   // Set up event listeners
   setupCanvasEvents()
   
-  // Load existing elements
-  loadElementsToCanvas()
+  // Load existing elements after a short delay to ensure everything is ready
+  await nextTick()
+  await loadElementsToCanvas()
+  
+  console.log('Canvas initialized successfully')
 }
 
 // Canvas event handlers
@@ -231,12 +239,51 @@ const handleKeyDown = (e: KeyboardEvent) => {
   
   // Undo/Redo handling
   if (e.ctrlKey || e.metaKey) {
-    if (e.key === 'z' && !e.shiftKey) {
-      e.preventDefault()
-      editorStore.undo()
-    } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
-      e.preventDefault()
-      editorStore.redo()
+    switch (e.key) {
+      case 'z':
+        if (!e.shiftKey) {
+          e.preventDefault()
+          editorStore.undo()
+        } else {
+          e.preventDefault()
+          editorStore.redo()
+        }
+        break
+      case 'y':
+        e.preventDefault()
+        editorStore.redo()
+        break
+      case 't':
+        if (boardsStore.isEditMode) {
+          e.preventDefault()
+          addTextElement()
+        }
+        break
+      case 'i':
+        if (boardsStore.isEditMode) {
+          e.preventDefault()
+          const placeholderUrl = 'https://via.placeholder.com/200x200/3B82F6/FFFFFF?text=Image'
+          addImageElement(placeholderUrl, 100, 100, 200, 200)
+        }
+        break
+      case 's':
+        if (boardsStore.isEditMode) {
+          e.preventDefault()
+          addShapeElement('rectangle', 100, 100)
+        }
+        break
+      case 'b':
+        if (selectedElementIds.value.length > 0 && boardsStore.isEditMode) {
+          e.preventDefault()
+          editorStore.bringToFront()
+        }
+        break
+      case 'f':
+        if (selectedElementIds.value.length > 0 && boardsStore.isEditMode) {
+          e.preventDefault()
+          editorStore.sendToBack()
+        }
+        break
     }
   }
   
@@ -245,23 +292,51 @@ const handleKeyDown = (e: KeyboardEvent) => {
     e.preventDefault()
     selectAllElements()
   }
+  
+  // Grid toggle
+  if (e.key === 'g' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault()
+    editorStore.toggleSnapToGrid()
+  }
 }
 
 // Element management
 const loadElementsToCanvas = async () => {
-  if (!fabricCanvas.value) return
-  
-  // Clear existing objects
-  fabricCanvas.value.clear()
-  
-  // Load elements from store
-  for (const element of elements.value) {
-    if (element) {
-      await addElementToCanvas(element)
-    }
+  if (!fabricCanvas.value) {
+    console.log('Canvas not ready for loading elements')
+    return
   }
   
-  fabricCanvas.value.renderAll()
+  // Check if canvas context is valid
+  try {
+    const context = fabricCanvas.value.getContext()
+    if (!context) {
+      console.log('Canvas context not ready')
+      return
+    }
+  } catch (error) {
+    console.log('Canvas not properly initialized yet')
+    return
+  }
+  
+  console.log(`Loading ${elements.value.length} elements to canvas`)
+  
+  try {
+    // Clear existing objects safely
+    fabricCanvas.value.clear()
+    
+    // Load elements from store
+    for (const element of elements.value) {
+      if (element) {
+        await addElementToCanvas(element)
+      }
+    }
+    
+    fabricCanvas.value.renderAll()
+    console.log('Elements loaded to canvas successfully')
+  } catch (error) {
+    console.error('Error loading elements to canvas:', error)
+  }
 }
 
 const addElementToCanvas = async (element: Element): Promise<fabric.Object | null> => {
@@ -435,8 +510,16 @@ const addTextElement = async (x = 100, y = 100) => {
     return
   }
   
+  // If no page is selected, automatically select the first page
+  if (!editorStore.currentPageId && boardsStore.sortedPages.length > 0) {
+    console.log('No page selected, selecting first page')
+    const firstPage = boardsStore.sortedPages[0]
+    editorStore.setCurrentPage(firstPage.id)
+    await editorStore.loadPageElements(firstPage.id)
+  }
+  
   if (!editorStore.currentPageId) {
-    console.error('Cannot add text element: no current page selected')
+    console.error('Cannot add text element: no current page selected and no pages available')
     return
   }
   
@@ -475,8 +558,16 @@ const addImageElement = async (imageUrl: string, x = 100, y = 100, originalWidth
     return
   }
   
+  // If no page is selected, automatically select the first page
+  if (!editorStore.currentPageId && boardsStore.sortedPages.length > 0) {
+    console.log('No page selected, selecting first page')
+    const firstPage = boardsStore.sortedPages[0]
+    editorStore.setCurrentPage(firstPage.id)
+    await editorStore.loadPageElements(firstPage.id)
+  }
+  
   if (!editorStore.currentPageId) {
-    console.error('Cannot add image element: no current page selected')
+    console.error('Cannot add image element: no current page selected and no pages available')
     return
   }
   
@@ -510,8 +601,16 @@ const addShapeElement = async (shapeType: 'rectangle' | 'circle' | 'triangle' = 
     return
   }
   
+  // If no page is selected, automatically select the first page
+  if (!editorStore.currentPageId && boardsStore.sortedPages.length > 0) {
+    console.log('No page selected, selecting first page')
+    const firstPage = boardsStore.sortedPages[0]
+    editorStore.setCurrentPage(firstPage.id)
+    await editorStore.loadPageElements(firstPage.id)
+  }
+  
   if (!editorStore.currentPageId) {
-    console.error('Cannot add shape element: no current page selected')
+    console.error('Cannot add shape element: no current page selected and no pages available')
     return
   }
   
@@ -548,8 +647,16 @@ const addStickerElement = async (stickerUrl: string, stickerType: string, catego
     return
   }
   
+  // If no page is selected, automatically select the first page
+  if (!editorStore.currentPageId && boardsStore.sortedPages.length > 0) {
+    console.log('No page selected, selecting first page')
+    const firstPage = boardsStore.sortedPages[0]
+    editorStore.setCurrentPage(firstPage.id)
+    await editorStore.loadPageElements(firstPage.id)
+  }
+  
   if (!editorStore.currentPageId) {
-    console.error('Cannot add sticker element: no current page selected')
+    console.error('Cannot add sticker element: no current page selected and no pages available')
     return
   }
   
@@ -651,21 +758,47 @@ defineExpose({
   selectAllElements,
   deleteSelectedElements,
   resizeCanvas,
+  refreshCanvas: () => {
+    console.log('Manual canvas refresh triggered')
+    loadElementsToCanvas()
+  }
 })
 
 // Lifecycle
 onMounted(async () => {
   await nextTick()
-  initializeCanvas()
+  await initializeCanvas()
   
   // Handle window resize
   window.addEventListener('resize', resizeCanvas)
+  
+  // Listen for editor reload events
+  const handleReloadElements = () => {
+    console.log('Reloading elements from undo/redo')
+    // Clear canvas and reload all elements
+    if (fabricCanvas.value && fabricCanvas.value.getContext()) {
+      try {
+        fabricCanvas.value.clear()
+        editorStore.elements.forEach(element => {
+          addElementToCanvas(element)
+        })
+        fabricCanvas.value.renderAll()
+      } catch (error) {
+        console.warn('Canvas reload failed, canvas may not be ready:', error)
+      }
+    } else {
+      console.warn('Canvas not ready for reload')
+    }
+  }
+  
+  window.addEventListener('editor:reload-elements', handleReloadElements)
 })
 
 onUnmounted(() => {
   // Clean up event listeners
   document.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('resize', resizeCanvas)
+  window.removeEventListener('editor:reload-elements', () => {})
   
   // Dispose of fabric canvas
   if (fabricCanvas.value) {

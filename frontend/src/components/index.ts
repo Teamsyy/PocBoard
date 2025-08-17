@@ -8,3 +8,6 @@ export { default as EmptyState } from './EmptyState.vue'
 
 // Canvas components
 export { default as CanvasEditor } from './CanvasEditor.vue'
+export { default as Toolbar } from './Toolbar.vue'
+export { default as SidebarLayers } from './SidebarLayers.vue'
+export { default as ImageUploader } from './ImageUploader.vue'

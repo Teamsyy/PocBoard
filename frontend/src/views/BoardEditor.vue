@@ -434,6 +434,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Save Status Indicator -->
+  <SaveStatus />
 </template>
 
 <script setup lang="ts">
@@ -441,7 +444,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBoardsStore } from '@/stores/boards'
 import { useEditorStore } from '@/stores/editor'
-import { CanvasEditor, Toolbar, SidebarLayers, ImageUploader } from '@/components'
+import { CanvasEditor, Toolbar, SidebarLayers, ImageUploader, SaveStatus } from '@/components'
 import type { Theme } from '@/types'
 
 interface Props {

@@ -15,11 +15,21 @@ export const useEditorStore = defineStore('editor', () => {
   const elements = ref<Element[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+  
+  // Auto-save state
+  const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const lastSaveTime = ref<Date | null>(null)
+  const saveError = ref<string | null>(null)
+  const pendingSaves = ref<Set<string>>(new Set())
+  const retryCount = ref<Map<string, number>>(new Map())
 
   // Constants
   const MAX_HISTORY_SIZE = 50
   const DEBOUNCE_DELAY = 300 // Default debounce
   const POSITION_DEBOUNCE_DELAY = 1000 // Longer delay for position/size changes
+  const MAX_RETRY_ATTEMPTS = 3
+  const RETRY_DELAY_BASE = 1000 // Base delay for retries (exponential backoff)
+  const SAVE_SUCCESS_DISPLAY_TIME = 2000 // How long to show "saved" status
 
   // Getters
   const selectedElements = computed(() => 
@@ -234,14 +244,21 @@ export const useEditorStore = defineStore('editor', () => {
     debouncedSave(elements.value[index], isPositionUpdate)
   }
 
-  const saveElement = async (element: Element) => {
+  const saveElement = async (element: Element, attempt = 1): Promise<void> => {
     const boardsStore = useBoardsStore()
     
     if (!boardsStore.currentBoard || !currentPageId.value || !boardsStore.editToken) {
       return
     }
 
+    const elementId = element.id
+    
     try {
+      // Mark element as being saved
+      pendingSaves.value.add(elementId)
+      saveStatus.value = 'saving'
+      saveError.value = null
+
       await elementsApi.update(
         boardsStore.currentBoard.id,
         currentPageId.value,
@@ -256,8 +273,88 @@ export const useEditorStore = defineStore('editor', () => {
           payload: element.payload,
         }
       )
+
+      // Save successful
+      pendingSaves.value.delete(elementId)
+      retryCount.value.delete(elementId)
+      saveStatus.value = 'saved'
+      lastSaveTime.value = new Date()
+      
+      // Show "saved" status briefly, then return to idle
+      setTimeout(() => {
+        if (saveStatus.value === 'saved' && pendingSaves.value.size === 0) {
+          saveStatus.value = 'idle'
+        }
+      }, SAVE_SUCCESS_DISPLAY_TIME)
+
     } catch (err: any) {
-      error.value = err.error?.message || 'Failed to save element'
+      pendingSaves.value.delete(elementId)
+      
+      const currentRetryCount = retryCount.value.get(elementId) || 0
+      
+      // Handle conflicts (409 status)
+      if (err.response?.status === 409) {
+        console.warn('Conflict detected for element:', elementId, 'Attempting to resolve...')
+        await handleConflict(element, err)
+        return
+      }
+      
+      // Retry logic for other errors
+      if (currentRetryCount < MAX_RETRY_ATTEMPTS) {
+        const nextAttempt = currentRetryCount + 1
+        retryCount.value.set(elementId, nextAttempt)
+        
+        const delay = RETRY_DELAY_BASE * Math.pow(2, currentRetryCount) // Exponential backoff
+        
+        console.log(`Retrying save for element ${elementId} (attempt ${nextAttempt}/${MAX_RETRY_ATTEMPTS}) in ${delay}ms`)
+        
+        setTimeout(() => {
+          saveElement(element, nextAttempt)
+        }, delay)
+        
+        return
+      }
+      
+      // Max retries reached
+      retryCount.value.delete(elementId)
+      saveStatus.value = 'error'
+      saveError.value = err.error?.message || `Failed to save element after ${MAX_RETRY_ATTEMPTS} attempts`
+      error.value = saveError.value
+      
+      console.error('Failed to save element after retries:', elementId, err)
+    }
+  }
+
+  // Handle conflicts when concurrent edits occur
+  const handleConflict = async (_localElement: Element, _conflictError: any) => {
+    try {
+      // Fetch the latest version of the element from the server
+      console.log('Fetching latest element version to resolve conflict...')
+      
+      // For now, we'll use a simple strategy: server wins
+      // In a more sophisticated implementation, you could:
+      // 1. Show a conflict resolution dialog to the user
+      // 2. Merge changes intelligently based on timestamps
+      // 3. Allow user to choose which version to keep
+      
+      // Reload the page elements to get the latest state
+      if (currentPageId.value) {
+        await loadPageElements(currentPageId.value)
+        
+        // Trigger canvas reload
+        if (canvas.value) {
+          const event = new CustomEvent('editor:reload-elements')
+          window.dispatchEvent(event)
+        }
+      }
+      
+      saveError.value = 'Conflict resolved - loaded latest version from server'
+      saveStatus.value = 'idle'
+      
+    } catch (err) {
+      console.error('Failed to resolve conflict:', err)
+      saveError.value = 'Failed to resolve conflict with server'
+      saveStatus.value = 'error'
     }
   }
 
@@ -514,10 +611,22 @@ export const useEditorStore = defineStore('editor', () => {
     loading.value = false
     error.value = null
     
+    // Reset auto-save state
+    saveStatus.value = 'idle'
+    lastSaveTime.value = null
+    saveError.value = null
+    pendingSaves.value.clear()
+    retryCount.value.clear()
+    
+    // Clear timeouts
     if (saveTimeout) {
       clearTimeout(saveTimeout)
       saveTimeout = null
     }
+    
+    // Clear position save timeouts
+    positionSaveTimeouts.forEach(timeout => clearTimeout(timeout))
+    positionSaveTimeouts.clear()
   }
 
   return {
@@ -531,6 +640,12 @@ export const useEditorStore = defineStore('editor', () => {
     elements,
     loading,
     error,
+    
+    // Auto-save state
+    saveStatus,
+    lastSaveTime,
+    saveError,
+    pendingSaves,
     
     // Getters
     selectedElements,

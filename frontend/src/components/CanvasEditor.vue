@@ -7,6 +7,7 @@
       :class="{ 'snap-to-grid': snapToGrid }"
     >
       <canvas 
+        id="fabric-canvas"
         ref="canvasElement"
         class="fabric-canvas"
         :width="canvasWidth"
@@ -67,6 +68,7 @@ const boardsStore = useBoardsStore()
 const canvasContainer = ref<HTMLDivElement>()
 const canvasElement = ref<HTMLCanvasElement>()
 const fabricCanvas = ref<fabric.Canvas>()
+const isTextEditing = ref(false) // Track text editing state
 
 // Computed
 const canvasWidth = computed(() => props.width)
@@ -145,6 +147,11 @@ const setupCanvasEvents = () => {
   canvas.on('mouse:down', handleMouseDown)
   canvas.on('mouse:up', handleMouseUp)
 
+  // Text editing events
+  canvas.on('mouse:dblclick', handleDoubleClick)
+  canvas.on('text:changed', handleTextChanged)
+  canvas.on('text:editing:exited', handleTextEditingExited)
+
   // Keyboard events
   document.addEventListener('keydown', handleKeyDown)
 }
@@ -166,6 +173,9 @@ const handleSelectionClear = () => {
 // Object modification handlers
 const handleObjectModified = (e: fabric.IEvent) => {
   if (!e.target) return
+  
+  // Don't update during text editing to prevent interrupting the editing session
+  if (isTextEditing.value) return
   
   const obj = e.target
   const elementId = (obj as any).elementId
@@ -217,14 +227,117 @@ const handleObjectRotating = (e: fabric.IEvent) => {
 
 // Mouse event handlers
 const handleMouseDown = (e: fabric.IEvent) => {
+  console.log('Mouse down on:', e.target?.type)
+  
   // Handle canvas clicks for deselection
   if (!e.target) {
     editorStore.clearSelection()
+    return
+  }
+  
+  // Handle text editing with single click if already selected
+  if (e.target.type === 'i-text' && boardsStore.isEditMode) {
+    const target = e.target as any
+    // If the text is already selected, enter edit mode on single click
+    if (fabricCanvas.value?.getActiveObject() === target) {
+      console.log('Single click on selected text, entering edit mode')
+      setTimeout(() => {
+        try {
+          target.enterEditing()
+          target.selectAll()
+          fabricCanvas.value?.renderAll()
+        } catch (error) {
+          console.error('Failed to enter edit mode on single click:', error)
+        }
+      }, 100)
+    }
   }
 }
 
 const handleMouseUp = (_e: fabric.IEvent) => {
   // Handle any post-interaction cleanup
+}
+
+// Text editing handlers
+const handleDoubleClick = (e: fabric.IEvent) => {
+  console.log('Double click detected on:', e.target?.type, 'Edit mode:', boardsStore.isEditMode)
+  if (!boardsStore.isEditMode) return
+  
+  const target = e.target as any
+  if (target && target.type === 'i-text') {
+    console.log('Entering text editing mode for:', target.elementId)
+    e.e.preventDefault() // Prevent default double-click behavior
+    e.e.stopPropagation()
+    
+    // Set text editing flag
+    isTextEditing.value = true
+    
+    // Enter text editing mode
+    setTimeout(() => {
+      try {
+        target.enterEditing()
+        target.selectAll()
+        fabricCanvas.value?.renderAll()
+        console.log('Successfully entered edit mode via double-click')
+      } catch (error) {
+        console.error('Failed to enter edit mode via double-click:', error)
+      }
+    }, 50)
+  }
+}
+
+const handleTextChanged = (e: fabric.IEvent) => {
+  console.log('Text changed detected')
+  if (!boardsStore.isEditMode) return
+  
+  // Set text editing flag to prevent canvas updates
+  isTextEditing.value = true
+  
+  const target = e.target as any
+  if (target && target.elementId) {
+    console.log('Updating text content:', target.text)
+    // Update the element in the store with new text content
+    const elementId = target.elementId
+    const element = editorStore.elements.find(el => el.id === elementId)
+    
+    if (element && element.kind === 'text') {
+      const updatedPayload = {
+        ...element.payload,
+        content: target.text || ''
+      }
+      
+      editorStore.updateElement(elementId, {
+        payload: updatedPayload
+      })
+    }
+  }
+}
+
+const handleTextEditingExited = (e: fabric.IEvent) => {
+  console.log('Text editing exited')
+  if (!boardsStore.isEditMode) return
+  
+  // Clear text editing flag
+  isTextEditing.value = false
+  
+  const target = e.target as any
+  if (target && target.elementId) {
+    console.log('Final text update on exit:', target.text)
+    // Final update when exiting text editing mode
+    const elementId = target.elementId
+    const element = editorStore.elements.find(el => el.id === elementId)
+    
+    if (element && element.kind === 'text') {
+      const updatedPayload = {
+        ...element.payload,
+        content: target.text || ''
+      }
+      
+      editorStore.updateElement(elementId, {
+        payload: updatedPayload
+      })
+    }
+  }
 }
 
 // Keyboard event handlers
@@ -234,6 +347,23 @@ const handleKeyDown = (e: KeyboardEvent) => {
     if (selectedElementIds.value.length > 0 && boardsStore.isEditMode) {
       e.preventDefault()
       deleteSelectedElements()
+    }
+  }
+  
+  // Enter key for text editing
+  if (e.key === 'Enter' && boardsStore.isEditMode) {
+    const activeObject = fabricCanvas.value?.getActiveObject() as any
+    if (activeObject && activeObject.type === 'i-text') {
+      console.log('Enter key pressed, entering text edit mode')
+      e.preventDefault()
+      try {
+        activeObject.enterEditing()
+        activeObject.selectAll()
+        fabricCanvas.value?.renderAll()
+        console.log('Successfully entered edit mode via Enter key')
+      } catch (error) {
+        console.error('Failed to enter edit mode via Enter key:', error)
+      }
     }
   }
   
@@ -304,6 +434,12 @@ const handleKeyDown = (e: KeyboardEvent) => {
 const loadElementsToCanvas = async () => {
   if (!fabricCanvas.value) {
     console.log('Canvas not ready for loading elements')
+    return
+  }
+  
+  // Don't reload canvas during text editing
+  if (isTextEditing.value) {
+    console.log('Skipping canvas reload during text editing')
     return
   }
   
@@ -384,10 +520,10 @@ const addElementToCanvas = async (element: Element): Promise<fabric.Object | nul
 }
 
 // Element creation methods
-const createTextObject = async (element: Element): Promise<fabric.Text> => {
+const createTextObject = async (element: Element): Promise<fabric.IText> => {
   const payload = element.payload as TextPayload
   
-  const textObject = new fabric.Text(payload.content, {
+  const textObject = new fabric.IText(payload.content, {
     left: element.x,
     top: element.y,
     width: element.w,
@@ -399,6 +535,7 @@ const createTextObject = async (element: Element): Promise<fabric.Text> => {
     fontStyle: payload.italic ? 'italic' : 'normal',
     textAlign: payload.textAlign,
     selectable: boardsStore.isEditMode,
+    editable: boardsStore.isEditMode,
   })
   
   return textObject
@@ -491,12 +628,22 @@ const updateElementFromFabricObject = (elementId: string, fabricObject: fabric.O
   const width = (fabricObject.width || 0) * (fabricObject.scaleX || 1)
   const height = (fabricObject.height || 0) * (fabricObject.scaleY || 1)
   
-  const updates = {
+  const updates: any = {
     x: fabricObject.left || 0,
     y: fabricObject.top || 0,
     w: width,
     h: height,
     rotation: fabricObject.angle || 0,
+  }
+  
+  // Handle text content updates for IText objects
+  if (fabricObject.type === 'i-text' && element.kind === 'text') {
+    const textObj = fabricObject as any
+    const updatedPayload = {
+      ...element.payload,
+      content: textObj.text || ''
+    }
+    updates.payload = updatedPayload
   }
   
   // Update element in store (this will trigger debounced API save)
@@ -544,6 +691,37 @@ const addTextElement = async (x = 100, y = 100) => {
     
     await addElementToCanvas(element)
     fabricCanvas.value?.renderAll()
+    
+    // Automatically enter edit mode for new text elements
+    setTimeout(() => {
+      console.log('Attempting to auto-enter edit mode for element:', element.id)
+      const allObjects = fabricCanvas.value?.getObjects() || []
+      console.log('Total objects on canvas:', allObjects.length)
+      
+      const textObject = allObjects.find((obj: any) => obj.elementId === element.id) as any
+      console.log('Found text object:', textObject ? textObject.type : 'not found')
+      
+      if (textObject && textObject.type === 'i-text') {
+        console.log('Auto-entering edit mode for new text')
+        fabricCanvas.value?.setActiveObject(textObject)
+        
+        // Set text editing flag before entering edit mode
+        isTextEditing.value = true
+        
+        // Try entering editing mode
+        try {
+          textObject.enterEditing()
+          textObject.selectAll()
+          fabricCanvas.value?.renderAll()
+          console.log('Successfully entered edit mode')
+        } catch (error) {
+          console.error('Failed to enter edit mode:', error)
+        }
+      } else {
+        console.log('Text object not found or wrong type')
+      }
+    }, 300) // Further increased timeout
+    
     console.log('Text element created successfully:', element.id)
   } catch (error) {
     console.error('Failed to add text element:', error)

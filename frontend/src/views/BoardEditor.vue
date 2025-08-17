@@ -435,6 +435,12 @@
     </div>
   </div>
 
+  <!-- Share and Export Bar -->
+  <ShareExportBar 
+    :board-id="boardId"
+    :edit-token="editToken"
+  />
+
   <!-- Save Status Indicator -->
   <SaveStatus />
 </template>
@@ -444,7 +450,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBoardsStore } from '@/stores/boards'
 import { useEditorStore } from '@/stores/editor'
-import { CanvasEditor, Toolbar, SidebarLayers, ImageUploader, SaveStatus } from '@/components'
+import { CanvasEditor, Toolbar, SidebarLayers, ImageUploader, SaveStatus, ShareExportBar } from '@/components'
 import type { Theme } from '@/types'
 
 interface Props {
@@ -480,6 +486,7 @@ const isEditMode = computed(() => boardsStore.isEditMode)
 const totalPages = computed(() => boardsStore.sortedPages.length || 1)
 const currentPage = computed(() => boardsStore.sortedPages[currentPageIndex.value])
 const currentTheme = computed(() => boardsStore.currentBoard?.skin || 'default')
+const editToken = computed(() => props.editToken || route.query.edit as string)
 
 // Canvas styling based on theme
 const canvasStyle = computed(() => {

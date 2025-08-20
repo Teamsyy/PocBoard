@@ -359,6 +359,33 @@ const handleSelectionChange = (_e: fabric.IEvent) => {
         mr: true   // middle-right
       })
       
+      // CRITICAL: Ensure corner controls have proper action handlers for scaling
+      const corners = ['tl', 'tr', 'br', 'bl']
+      corners.forEach(cornerKey => {
+        if (obj.controls && obj.controls[cornerKey]) {
+          obj.controls[cornerKey].actionName = 'scale'
+          // Use the default scaling action handler from Fabric's prototype
+          const defaultControl = fabric.Object.prototype.controls[cornerKey]
+          if (defaultControl && defaultControl.actionHandler) {
+            obj.controls[cornerKey].actionHandler = defaultControl.actionHandler
+          }
+          obj.controls[cornerKey].cursorStyle = 'crosshair'
+        }
+      })
+      
+      // Also ensure middle controls have proper action handlers
+      const middles = ['mt', 'mb', 'ml', 'mr']
+      middles.forEach(middleKey => {
+        if (obj.controls && obj.controls[middleKey]) {
+          obj.controls[middleKey].actionName = 'scale'
+          // Use the default scaling action handler from Fabric's prototype
+          const defaultControl = fabric.Object.prototype.controls[middleKey]
+          if (defaultControl && defaultControl.actionHandler) {
+            obj.controls[middleKey].actionHandler = defaultControl.actionHandler
+          }
+        }
+      })
+      
       // Update coordinates to ensure proper interaction
       obj.setCoords()
       
@@ -379,6 +406,30 @@ const handleSelectionChange = (_e: fabric.IEvent) => {
   
   if (activeObjects.length > 0) {
     fabricCanvas.value?.renderAll()
+    
+    // CRITICAL FIX: Add aggressive control reactivation after selection
+    // This addresses the issue where controls don't work until group/ungroup
+    setTimeout(() => {
+      if (fabricCanvas.value && activeObjects.length > 0) {
+        activeObjects.forEach((obj: any) => {
+          if (boardsStore.isEditMode) {
+            // Force complete control reinitialization
+            fixObjectControls(obj)
+            
+            // Additional aggressive reactivation
+            obj.setCoords()
+            
+            // Force the canvas to recognize this object as actively selected
+            fabricCanvas.value?.setActiveObject(obj)
+          }
+        })
+        
+        // Force final render to ensure controls are visible and interactive
+        fabricCanvas.value.renderAll()
+        
+        console.log('Aggressively reactivated controls for selected objects')
+      }
+    }, 10) // Small delay to ensure selection is fully processed
   }
   
   editorStore.selectElements(elementIds)
@@ -1133,20 +1184,30 @@ const addElementToCanvas = async (element: Element): Promise<fabric.Object | nul
           mr: true   // middle-right
         })
         
-        // CRITICAL: Ensure corner controls are set up for scaling
+        // CRITICAL: Ensure corner controls are set up for scaling with proper action handlers
         const corners = ['tl', 'tr', 'br', 'bl']
         corners.forEach(cornerKey => {
-          if (fabricObject.controls[cornerKey]) {
+          if (fabricObject && fabricObject.controls && fabricObject.controls[cornerKey]) {
             fabricObject.controls[cornerKey].actionName = 'scale'
+            // Use the default scaling action handler from Fabric's prototype
+            const defaultControl = fabric.Object.prototype.controls[cornerKey]
+            if (defaultControl && defaultControl.actionHandler) {
+              fabricObject.controls[cornerKey].actionHandler = defaultControl.actionHandler
+            }
             fabricObject.controls[cornerKey].cursorStyle = 'crosshair'
           }
         })
         
-        // Also ensure middle controls work for scaling
+        // Also ensure middle controls work for scaling with proper action handlers
         const middles = ['mt', 'mb', 'ml', 'mr']
         middles.forEach(middleKey => {
-          if (fabricObject.controls[middleKey]) {
+          if (fabricObject && fabricObject.controls && fabricObject.controls[middleKey]) {
             fabricObject.controls[middleKey].actionName = 'scale'
+            // Use the default scaling action handler from Fabric's prototype
+            const defaultControl = fabric.Object.prototype.controls[middleKey]
+            if (defaultControl && defaultControl.actionHandler) {
+              fabricObject.controls[middleKey].actionHandler = defaultControl.actionHandler
+            }
           }
         })
         
@@ -1796,23 +1857,33 @@ const fixObjectControls = (obj: any) => {
   })
   
   // 9. CRITICAL: Ensure corner controls are set up for scaling, not just moving
-  // Force corner controls to be scaling controls
+  // Force corner controls to be scaling controls with proper action handlers
   const corners = ['tl', 'tr', 'br', 'bl']
   corners.forEach(cornerKey => {
-    if (obj.controls[cornerKey]) {
+    if (obj.controls && obj.controls[cornerKey]) {
       // Ensure corner controls handle scaling
       obj.controls[cornerKey].actionName = 'scale'
+      // Use the default scaling action handler from Fabric's prototype
+      const defaultControl = fabric.Object.prototype.controls[cornerKey]
+      if (defaultControl && defaultControl.actionHandler) {
+        obj.controls[cornerKey].actionHandler = defaultControl.actionHandler
+      }
       // Make sure corner controls have the scaling cursor
       obj.controls[cornerKey].cursorStyle = 'crosshair'
       obj.controls[cornerKey].cursorStyleHandler = () => 'crosshair'
     }
   })
   
-  // Also ensure middle controls are set up properly
+  // Also ensure middle controls are set up properly with action handlers
   const middles = ['mt', 'mb', 'ml', 'mr']
   middles.forEach(middleKey => {
-    if (obj.controls[middleKey]) {
+    if (obj.controls && obj.controls[middleKey]) {
       obj.controls[middleKey].actionName = 'scale'
+      // Use the default scaling action handler from Fabric's prototype
+      const defaultControl = fabric.Object.prototype.controls[middleKey]
+      if (defaultControl && defaultControl.actionHandler) {
+        obj.controls[middleKey].actionHandler = defaultControl.actionHandler
+      }
       if (middleKey === 'mt' || middleKey === 'mb') {
         obj.controls[middleKey].cursorStyle = 'ns-resize'
         obj.controls[middleKey].cursorStyleHandler = () => 'ns-resize'
@@ -2094,48 +2165,52 @@ defineExpose({
       console.log('Attempting to repair controls...')
       
       // Remove and re-add the object to reset its controls
-      const objects = fabricCanvas.value.getObjects()
-      const objectIndex = objects.indexOf(activeObject)
-      
-      if (objectIndex >= 0) {
-        // Store object properties
-        const objData = activeObject.toObject()
-        const elementId = (activeObject as any).elementId
+      if (fabricCanvas.value) {
+        const objects = fabricCanvas.value.getObjects()
+        const objectIndex = objects.indexOf(activeObject)
         
-        // Remove the object
-        fabricCanvas.value.remove(activeObject)
-        
-        // Recreate it with proper controls
-        fabric.util.enlivenObjects([objData], (enlivenedObjects: fabric.Object[]) => {
-          const newObject = enlivenedObjects[0]
+        if (objectIndex >= 0) {
+          // Store object properties
+          const objData = activeObject.toObject()
+          const elementId = (activeObject as any).elementId
           
-          // Restore element ID and control properties
-          ;(newObject as any).elementId = elementId
-          newObject.hasControls = true
-          newObject.hasBorders = true
-          newObject.hasRotatingPoint = true
-          newObject.selectable = true
-          newObject.evented = true
-          newObject.lockScalingX = false
-          newObject.lockScalingY = false
-          newObject.cornerSize = 12
-          newObject.cornerColor = '#FF0000'
-          newObject.transparentCorners = false
+          // Remove the object
+          fabricCanvas.value.remove(activeObject)
           
-          // Set controls visibility
-          newObject.setControlsVisibility({
-            mtr: true, tr: true, br: true, bl: true, tl: true,
-            mt: true, mb: true, ml: true, mr: true
-          })
-          
-          // Add back to canvas
-          fabricCanvas.value.add(newObject)
-          fabricCanvas.value.setActiveObject(newObject)
-          newObject.setCoords()
-          fabricCanvas.value.renderAll()
-          
-          console.log('Object recreated with fresh controls')
-        })
+          // Recreate it with proper controls
+          fabric.util.enlivenObjects([objData], (enlivenedObjects: fabric.Object[]) => {
+            const newObject = enlivenedObjects[0]
+            
+            // Restore element ID and control properties
+            ;(newObject as any).elementId = elementId
+            newObject.hasControls = true
+            newObject.hasBorders = true
+            newObject.hasRotatingPoint = true
+            newObject.selectable = true
+            newObject.evented = true
+            newObject.lockScalingX = false
+            newObject.lockScalingY = false
+            newObject.cornerSize = 12
+            newObject.cornerColor = '#FF0000'
+            newObject.transparentCorners = false
+            
+            // Set controls visibility
+            newObject.setControlsVisibility({
+              mtr: true, tr: true, br: true, bl: true, tl: true,
+              mt: true, mb: true, ml: true, mr: true
+            })
+            
+            // Add back to canvas
+            if (fabricCanvas.value) {
+              fabricCanvas.value.add(newObject)
+              fabricCanvas.value.setActiveObject(newObject)
+              newObject.setCoords()
+              fabricCanvas.value.renderAll()
+              
+              console.log('Object recreated with fresh controls')
+            }
+          }, '')
+        }
       }
     }
   }

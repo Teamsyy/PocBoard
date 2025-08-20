@@ -251,7 +251,7 @@ export const useEditorStore = defineStore('editor', () => {
     debouncedSave(elements.value[index], isPositionUpdate)
   }
 
-  const saveElement = async (element: Element, attempt = 1): Promise<void> => {
+  const saveElement = async (element: Element): Promise<void> => {
     const boardsStore = useBoardsStore()
     
     if (!boardsStore.currentBoard || !currentPageId.value || !boardsStore.editToken) {
@@ -316,7 +316,7 @@ export const useEditorStore = defineStore('editor', () => {
         console.log(`Retrying save for element ${elementId} (attempt ${nextAttempt}/${MAX_RETRY_ATTEMPTS}) in ${delay}ms`)
         
         setTimeout(() => {
-          saveElement(element, nextAttempt)
+          saveElement(element)
         }, delay)
         
         return
@@ -501,7 +501,7 @@ export const useEditorStore = defineStore('editor', () => {
             }
             
             console.log(`Updating fabric object ${fabricProperty} to:`, fabricValue)
-            fabricObject.set(fabricProperty, fabricValue)
+            ;(fabricObject as any).set(fabricProperty, fabricValue)
             canvas.value.renderAll()
           }
         }

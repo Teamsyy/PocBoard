@@ -222,38 +222,13 @@
             </div>
           </div>
         </div>
-
-        <!-- Theme Selection -->
-        <div class="sidebar-header border-t border-amber-200">
-          <h2 class="text-sm font-semibold text-amber-800">Themes</h2>
-        </div>
-        <div class="sidebar-content">
-          <div class="grid grid-cols-2 gap-2">
-            <button 
-              v-for="theme in availableThemes"
-              :key="theme.name"
-              @click="applyTheme(theme)"
-              :class="[
-                'aspect-square rounded-lg border-2 transition-colors',
-                currentTheme === theme.name 
-                  ? 'border-primary-500 ring-2 ring-primary-200' 
-                  : 'border-amber-200 hover:border-amber-300'
-              ]"
-              :style="{ backgroundImage: `url(${theme.preview})`, backgroundSize: 'cover' }"
-              :title="theme.name"
-              :disabled="!isEditMode"
-            >
-              <span class="sr-only">{{ theme.name }}</span>
-            </button>
-          </div>
-        </div>
       </aside>
 
       <!-- Main Canvas Area -->
       <main class="flex-1 flex flex-col overflow-hidden bg-amber-50">
         <!-- Canvas Container -->
         <div class="flex-1 p-4 overflow-auto">
-          <div class="canvas-container mx-auto max-w-4xl h-full min-h-[600px]" :style="canvasStyle">
+          <div class="canvas-container mx-auto max-w-4xl h-full min-h-[600px]">
             <CanvasEditor
               v-if="currentPage"
               ref="canvasEditor"
@@ -384,31 +359,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Theme Selection -->
-        <div class="sidebar-header border-t border-amber-200">
-          <h2 class="text-sm font-semibold text-amber-800">Themes</h2>
-        </div>
-        <div class="sidebar-content">
-          <div class="grid grid-cols-2 gap-2">
-            <button 
-              v-for="theme in availableThemes"
-              :key="theme.name"
-              @click="applyTheme(theme)"
-              :class="[
-                'aspect-square rounded-lg border-2 transition-colors',
-                currentTheme === theme.name 
-                  ? 'border-primary-500 ring-2 ring-primary-200' 
-                  : 'border-amber-200 hover:border-amber-300'
-              ]"
-              :style="{ backgroundImage: `url(${theme.preview})`, backgroundSize: 'cover' }"
-              :title="theme.name"
-              :disabled="!isEditMode"
-            >
-              <span class="sr-only">{{ theme.name }}</span>
-            </button>
-          </div>
-        </div>
       </aside>
     </div>
 
@@ -451,7 +401,6 @@ import { useRoute } from 'vue-router'
 import { useBoardsStore } from '@/stores/boards'
 import { useEditorStore } from '@/stores/editor'
 import { CanvasEditor, Toolbar, SidebarLayers, ImageUploader, SaveStatus, ShareExportBar } from '@/components'
-import type { Theme } from '@/types'
 
 interface Props {
   boardId: string
@@ -472,35 +421,12 @@ const showMobileSidebar = ref(false)
 const currentPageIndex = ref(0)
 const canvasEditor = ref<InstanceType<typeof CanvasEditor>>()
 
-// Available themes (placeholder data)
-const availableThemes = ref<Theme[]>([
-  { name: 'Default', skin: 'default', preview: '/skins/default-preview.svg' },
-  { name: 'Wood', skin: 'wood', preview: '/skins/wood-preview.svg' },
-  { name: 'Notebook', skin: 'notebook', preview: '/skins/notebook-preview.svg' },
-  { name: 'Cork', skin: 'cork', preview: '/skins/cork-preview.svg' },
-])
-
 // Computed properties
 const boardTitle = computed(() => boardsStore.currentBoard?.title || 'Untitled Board')
 const isEditMode = computed(() => boardsStore.isEditMode)
 const totalPages = computed(() => boardsStore.sortedPages.length || 1)
 const currentPage = computed(() => boardsStore.sortedPages[currentPageIndex.value])
-const currentTheme = computed(() => boardsStore.currentBoard?.skin || 'default')
 const editToken = computed(() => props.editToken || route.query.edit as string)
-
-// Canvas styling based on theme
-const canvasStyle = computed(() => {
-  const theme = availableThemes.value.find(t => t.name.toLowerCase() === currentTheme.value)
-  if (theme && theme.preview) {
-    return {
-      backgroundImage: `url(${theme.preview})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }
-  }
-  return {}
-})
 
 // Editor state
 const snapToGrid = computed({
@@ -625,16 +551,6 @@ const undo = () => {
 
 const redo = () => {
   editorStore.redo()
-}
-
-const applyTheme = async (theme: Theme) => {
-  if (!isEditMode.value) return
-  
-  try {
-    await boardsStore.updateBoard({ skin: theme.skin })
-  } catch (error) {
-    console.error('Failed to apply theme:', error)
-  }
 }
 
 const exportPage = () => {

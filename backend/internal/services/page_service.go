@@ -48,7 +48,9 @@ func (s *PageService) CreatePage(boardID uuid.UUID, title string, date time.Time
 // GetPagesByBoard retrieves all pages for a board ordered by order_idx
 func (s *PageService) GetPagesByBoard(boardID uuid.UUID) ([]models.Page, error) {
 	var pages []models.Page
-	err := s.db.Where("board_id = ?", boardID).
+	err := s.db.Preload("Elements", func(db *gorm.DB) *gorm.DB {
+		return db.Order("z ASC")
+	}).Where("board_id = ?", boardID).
 		Order("order_idx ASC").
 		Find(&pages).Error
 	if err != nil {

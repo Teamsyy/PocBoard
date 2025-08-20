@@ -78,7 +78,7 @@
           
           <input 
             v-model="textColor"
-            @change="updateTextStyle('fill', textColor)"
+            @change="updateTextStyle('color', textColor)"
             type="color"
             class="toolbar-color-input"
             title="Text Color"
@@ -245,9 +245,9 @@ watch(() => editorStore.selectedElements, (selectedElements) => {
     if (payload) {
       fontFamily.value = payload.fontFamily || 'Arial'
       fontSize.value = payload.fontSize || 16
-      textColor.value = payload.fill || '#000000'
-      isBold.value = payload.fontWeight === 'bold' || payload.fontWeight >= 700
-      isItalic.value = payload.fontStyle === 'italic'
+      textColor.value = payload.color || '#000000'
+      isBold.value = payload.bold || false
+      isItalic.value = payload.italic || false
     }
   }
 }, { immediate: true })
@@ -272,15 +272,15 @@ const updateTextStyle = (property: string, value: any) => {
 }
 
 const toggleBold = () => {
-  const newWeight = isBold.value ? 'normal' : 'bold'
-  isBold.value = !isBold.value
-  updateTextStyle('fontWeight', newWeight)
+  const newBold = !isBold.value
+  isBold.value = newBold
+  updateTextStyle('bold', newBold)
 }
 
 const toggleItalic = () => {
-  const newStyle = isItalic.value ? 'normal' : 'italic'
-  isItalic.value = !isItalic.value
-  updateTextStyle('fontStyle', newStyle)
+  const newItalic = !isItalic.value
+  isItalic.value = newItalic
+  updateTextStyle('italic', newItalic)
 }
 
 const bringToFront = () => {

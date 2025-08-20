@@ -25,11 +25,12 @@ export const pagesApi = {
 
   // Get all pages for a board
   async list(boardId: string): Promise<Page[]> {
-    const response = await apiClient.get<ApiResponse<Page[]>>(`/boards/${boardId}/pages`)
+    const response = await apiClient.get<ApiResponse<{ pages: Page[], total: number }>>(`/boards/${boardId}/pages`)
     if (response.data.error) {
       throw response.data
     }
-    return response.data.data!
+    // Extract pages from the new response structure
+    return response.data.data!.pages
   },
 
   // Get a specific page

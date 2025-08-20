@@ -127,10 +127,27 @@ func (h *PageHandler) GetPagesByBoard(c *fiber.Ctx) error {
 		return utils.SendInternalError(c, "Failed to get pages", nil)
 	}
 
-	// Convert to response DTOs
-	pageResponses := make([]dto.PageResponse, len(pages))
+	// Convert to response DTOs with elements
+	pageResponses := make([]dto.PageWithElementsResponse, len(pages))
 	for i, page := range pages {
-		pageResponses[i] = dto.PageResponse{
+		// Convert elements to response DTOs
+		elementResponses := make([]dto.ElementResponse, len(page.Elements))
+		for j, element := range page.Elements {
+			elementResponses[j] = dto.ElementResponse{
+				ID:       element.ID,
+				PageID:   element.PageID,
+				Kind:     element.Kind,
+				X:        element.X,
+				Y:        element.Y,
+				W:        element.W,
+				H:        element.H,
+				Rotation: element.Rotation,
+				Z:        element.Z,
+				Payload:  element.Payload,
+			}
+		}
+
+		pageResponses[i] = dto.PageWithElementsResponse{
 			ID:        page.ID,
 			BoardID:   page.BoardID,
 			Title:     page.Title,
@@ -138,10 +155,11 @@ func (h *PageHandler) GetPagesByBoard(c *fiber.Ctx) error {
 			OrderIdx:  page.OrderIdx,
 			CreatedAt: page.CreatedAt,
 			UpdatedAt: page.UpdatedAt,
+			Elements:  elementResponses,
 		}
 	}
 
-	response := dto.PagesListResponse{
+	response := dto.PagesWithElementsListResponse{
 		Pages: pageResponses,
 		Total: len(pageResponses),
 	}

@@ -34,13 +34,12 @@ export const useBoardsStore = defineStore('boards', () => {
     publicToken.value = urlParams.get('public_token')
   }
 
-  const createBoard = async (title: string, skin?: string) => {
+  const createBoard = async (title: string) => {
     loading.value = true
     error.value = null
 
     try {
-      const createData = skin ? { title, skin } : { title }
-      const response = await boardsApi.create(createData)
+      const response = await boardsApi.create({ title })
       currentBoard.value = response.board
 
       // Extract tokens from board object directly (more reliable)
@@ -98,7 +97,7 @@ export const useBoardsStore = defineStore('boards', () => {
     }
   }
 
-  const updateBoard = async (updates: { title?: string; skin?: string }) => {
+  const updateBoard = async (updates: { title?: string }) => {
     if (!currentBoard.value || !editToken.value) {
       throw new Error('No board loaded or edit access required')
     }
@@ -126,11 +125,13 @@ export const useBoardsStore = defineStore('boards', () => {
     try {
       console.log('Loading pages for board:', currentBoard.value.id)
       const loadedPages = await pagesApi.list(currentBoard.value.id)
-      console.log('Pages loaded:', loadedPages)
+      console.log('Pages loaded from API:', loadedPages)
+      console.log('First page elements:', loadedPages[0]?.elements)
       
       // Ensure pages is always an array
       pages.value = Array.isArray(loadedPages) ? loadedPages : []
       console.log('Pages set to:', pages.value)
+      console.log('Total elements in first page:', pages.value[0]?.elements?.length)
       
       return pages.value
     } catch (err: any) {

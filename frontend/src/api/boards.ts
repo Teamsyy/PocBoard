@@ -3,12 +3,10 @@ import type { Board, ApiResponse } from '@/types'
 
 export interface CreateBoardRequest {
   title: string
-  skin?: string
 }
 
 export interface UpdateBoardRequest {
   title?: string
-  skin?: string
 }
 
 export interface BoardResponse {

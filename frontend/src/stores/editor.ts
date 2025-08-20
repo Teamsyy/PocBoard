@@ -92,12 +92,19 @@ export const useEditorStore = defineStore('editor', () => {
 
   const loadPageElements = async (pageId: string) => {
     const boardsStore = useBoardsStore()
+    console.log('Loading elements for page:', pageId)
+    console.log('Available pages:', boardsStore.pages.length)
+    
     const page = boardsStore.pages.find(p => p.id === pageId)
+    console.log('Found page:', page?.title)
+    console.log('Page elements:', page?.elements?.length || 0)
     
     if (page?.elements) {
       elements.value = page.elements
+      console.log('Elements loaded:', elements.value.length)
     } else {
       elements.value = []
+      console.log('No elements found, setting empty array')
     }
   }
 
@@ -468,8 +475,33 @@ export const useEditorStore = defineStore('editor', () => {
         // Update fabric object if canvas is available
         if (canvas.value) {
           const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
-          if (fabricObject) {
-            fabricObject.set(property, value)
+          if (fabricObject && fabricObject.type === 'i-text') {
+            // Map our property names to Fabric.js property names and convert values
+            let fabricProperty: string
+            let fabricValue: any = value
+            
+            if (property === 'bold') {
+              fabricProperty = 'fontWeight'
+              fabricValue = value ? 'bold' : 'normal'
+            } else if (property === 'italic') {
+              fabricProperty = 'fontStyle'
+              fabricValue = value ? 'italic' : 'normal'
+            } else if (property === 'color') {
+              fabricProperty = 'fill'
+              fabricValue = value
+            } else if (property === 'fontFamily') {
+              fabricProperty = 'fontFamily'
+              fabricValue = value
+            } else if (property === 'fontSize') {
+              fabricProperty = 'fontSize'
+              fabricValue = value
+            } else {
+              fabricProperty = property
+              fabricValue = value
+            }
+            
+            console.log(`Updating fabric object ${fabricProperty} to:`, fabricValue)
+            fabricObject.set(fabricProperty, fabricValue)
             canvas.value.renderAll()
           }
         }

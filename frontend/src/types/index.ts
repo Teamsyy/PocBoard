@@ -2,7 +2,6 @@
 export interface Board {
   id: string
   title: string
-  skin: string
   edit_token: string
   public_token: string
   created_at: string
@@ -55,6 +54,7 @@ export interface ImagePayload {
   url: string
   originalWidth: number
   originalHeight: number
+  description?: string
   filters?: any[]
 }
 
@@ -108,13 +108,6 @@ export interface CanvasState {
 }
 
 // Fabric.js types are now provided by @types/fabric
-
-// Theme types
-export interface Theme {
-  name: string
-  skin: string
-  preview: string
-}
 
 // Upload types
 export interface UploadResponse {

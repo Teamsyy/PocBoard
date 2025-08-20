@@ -47,3 +47,9 @@ type PagesListResponse struct {
 	Pages []PageResponse `json:"pages"`
 	Total int            `json:"total"`
 }
+
+// PagesWithElementsListResponse represents the response for listing pages with elements
+type PagesWithElementsListResponse struct {
+	Pages []PageWithElementsResponse `json:"pages"`
+	Total int                        `json:"total"`
+}

@@ -75,8 +75,7 @@ const createBoard = async () => {
   try {
     // Create board via store
     const response = await boardsStore.createBoard(
-      boardTitle.value.trim(),
-      'default'
+      boardTitle.value.trim()
     )
 
     console.log('Board creation response:', response)

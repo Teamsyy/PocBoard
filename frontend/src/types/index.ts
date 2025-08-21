@@ -33,6 +33,8 @@ export interface Element {
   rotation: number
   z: number
   payload: ElementPayload
+  visible: boolean
+  locked: boolean
   createdAt: string
   updatedAt: string
 }

@@ -192,10 +192,44 @@ const handleTextInput = (event: Event) => {
   const target = event.target as HTMLDivElement
   const newContent = target.innerHTML || ''
   
+  // Store cursor position before update
+  const selection = window.getSelection()
+  let range = null
+  let offset = 0
+  
+  if (selection && selection.rangeCount > 0) {
+    range = selection.getRangeAt(0)
+    offset = range.startOffset
+  }
+  
   emit('update', props.element.id, {
     payload: {
       ...payload.value,
       content: newContent
+    }
+  })
+  
+  // Restore cursor position after update
+  nextTick(() => {
+    if (textContent.value && range && selection) {
+      try {
+        const newRange = document.createRange()
+        const textNode = textContent.value.firstChild || textContent.value
+        
+        if (textNode.nodeType === Node.TEXT_NODE) {
+          newRange.setStart(textNode, Math.min(offset, textNode.textContent?.length || 0))
+          newRange.setEnd(textNode, Math.min(offset, textNode.textContent?.length || 0))
+        } else {
+          newRange.setStart(textNode, 0)
+          newRange.setEnd(textNode, 0)
+        }
+        
+        selection.removeAllRanges()
+        selection.addRange(newRange)
+      } catch (e) {
+        // Fallback: just focus the element
+        textContent.value.focus()
+      }
     }
   })
 }

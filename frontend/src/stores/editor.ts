@@ -39,9 +39,9 @@ export const useEditorStore = defineStore('editor', () => {
   const canUndo = computed(() => undoStack.value.length > 0)
   const canRedo = computed(() => redoStack.value.length > 0)
   
-  const sortedElements = computed(() => 
-    [...elements.value].sort((a, b) => a.z - b.z)
-  )
+  const sortedElements = computed(() => {
+    return [...elements.value].sort((a, b) => a.z - b.z)
+  })
 
   // Store for debounced saves
   let saveTimeout: NodeJS.Timeout | null = null
@@ -100,8 +100,17 @@ export const useEditorStore = defineStore('editor', () => {
     console.log('Page elements:', page?.elements?.length || 0)
     
     if (page?.elements) {
-      elements.value = page.elements
-      console.log('Elements loaded:', elements.value.length)
+      // Ensure all elements have proper default values for visible and locked
+      elements.value = page.elements.map(element => ({
+        ...element,
+        visible: element.visible ?? true,  // Default to true if not set
+        locked: element.locked ?? false   // Default to false if not set
+      }))
+      console.log('Elements loaded and normalized:', elements.value.length)
+      
+      if (elements.value.length > 0) {
+        console.log('Sample element after normalization:', JSON.stringify(elements.value[0], null, 2))
+      }
     } else {
       elements.value = []
       console.log('No elements found, setting empty array')
@@ -215,12 +224,25 @@ export const useEditorStore = defineStore('editor', () => {
       const newElement = await elementsApi.create(
         boardsStore.currentBoard.id,
         currentPageId.value,
-        { kind, x, y, w, h, rotation, payload }
+        { 
+          kind, 
+          x, 
+          y, 
+          w, 
+          h, 
+          rotation, 
+          visible: true,  // Default to visible
+          locked: false,  // Default to unlocked
+          payload 
+        }
       )
       
+      // Only add to local state if server creation was successful
       elements.value.push(newElement)
+      console.log('Element created successfully:', newElement.id)
       return newElement
     } catch (err: any) {
+      console.error('Failed to create element:', err)
       error.value = err.error?.message || 'Failed to create element'
       throw err
     } finally {
@@ -229,6 +251,8 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   const updateElement = async (elementId: string, updates: Partial<Element>) => {
+    console.log('updateElement called:', elementId, updates)
+    
     const boardsStore = useBoardsStore()
     
     if (!boardsStore.currentBoard || !currentPageId.value || !boardsStore.editToken) {
@@ -266,19 +290,29 @@ export const useEditorStore = defineStore('editor', () => {
       saveStatus.value = 'saving'
       saveError.value = null
 
+      const updateData: any = {
+        x: element.x,
+        y: element.y,
+        w: element.w,
+        h: element.h,
+        rotation: element.rotation,
+        z: element.z,
+        payload: element.payload,
+      }
+      
+      // Always include visible/locked if they exist in the element
+      if ('visible' in element) {
+        updateData.visible = element.visible
+      }
+      if ('locked' in element) {
+        updateData.locked = element.locked
+      }
+
       await elementsApi.update(
         boardsStore.currentBoard.id,
         currentPageId.value,
         element.id,
-        {
-          x: element.x,
-          y: element.y,
-          w: element.w,
-          h: element.h,
-          rotation: element.rotation,
-          z: element.z,
-          payload: element.payload,
-        }
+        updateData
       )
 
       // Save successful
@@ -296,6 +330,20 @@ export const useEditorStore = defineStore('editor', () => {
 
     } catch (err: any) {
       pendingSaves.value.delete(elementId)
+      
+      // Handle 404 - element doesn't exist on server
+      if (err.status === 404 || err.response?.status === 404) {
+        console.warn('Element not found on server, removing from local state:', elementId)
+        // Remove element from local state since it doesn't exist on server
+        const elementIndex = elements.value.findIndex(el => el.id === elementId)
+        if (elementIndex !== -1) {
+          elements.value.splice(elementIndex, 1)
+        }
+        saveStatus.value = 'error'
+        saveError.value = 'Element not found on server and was removed locally'
+        error.value = saveError.value
+        return
+      }
       
       const currentRetryCount = retryCount.value.get(elementId) || 0
       
@@ -542,16 +590,40 @@ export const useEditorStore = defineStore('editor', () => {
     error.value = null
   }
 
-  const setElementVisibility = (elementId: string, visible: boolean) => {
-    // With vue-drag-resize, visibility would be handled through v-show in the template
-    // For now, we'll remove this since Element type doesn't have visible property
-    console.log(`Setting element ${elementId} visibility to ${visible}`)
+  const setElementVisibility = async (elementId: string, visible: boolean) => {
+    console.log('Store setElementVisibility called:', elementId, visible)
+    const element = elements.value.find(el => el.id === elementId)
+    if (element) {
+      console.log('Element found, updating visibility from', element.visible, 'to', visible)
+      try {
+        await updateElement(elementId, { visible })
+        console.log('Visibility update completed successfully')
+      } catch (error) {
+        console.error('Failed to update element visibility:', error)
+        throw error
+      }
+    } else {
+      console.error('Element not found in store:', elementId)
+      throw new Error('Element not found')
+    }
   }
 
-  const setElementLocked = (elementId: string, locked: boolean) => {
-    // With vue-drag-resize, lock functionality is handled through the 'active' prop
-    // For now, we'll remove this since Element type doesn't have locked property
-    console.log(`Setting element ${elementId} locked to ${locked}`)
+  const setElementLocked = async (elementId: string, locked: boolean) => {
+    console.log('Store setElementLocked called:', elementId, locked)
+    const element = elements.value.find(el => el.id === elementId)
+    if (element) {
+      console.log('Element found, updating locked state from', element.locked, 'to', locked)
+      try {
+        await updateElement(elementId, { locked })
+        console.log('Lock state update completed successfully')
+      } catch (error) {
+        console.error('Failed to update element lock state:', error)
+        throw error
+      }
+    } else {
+      console.error('Element not found in store:', elementId)
+      throw new Error('Element not found')
+    }
   }
 
   const deleteElement = async (elementId: string) => {

@@ -47,7 +47,8 @@
             </div>
 
             <!-- Layer Controls -->
-            <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="flex items-center space-x-1 opacity-75 group-hover:opacity-100 transition-opacity bg-gray-50 rounded px-1"
+                 style="border: 1px solid #e5e7eb;">
               <!-- Visibility Toggle -->
               <button
                 @click.stop="toggleVisibility(element.id)"
@@ -101,9 +102,16 @@
 
     <!-- Layer Actions -->
     <div class="border-t border-gray-200 p-3">
-      <div class="flex items-center justify-between text-xs text-gray-500">
+      <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
         <span>{{ selectedElementIds.length }} selected</span>
         <div class="flex items-center space-x-2">
+          <button
+            @click="debugLogState"
+            class="px-2 py-1 rounded text-blue-600 hover:bg-blue-50 transition-colors"
+            title="Debug log state"
+          >
+            Debug
+          </button>
           <button
             v-if="selectedElementIds.length > 0"
             @click="handleDeleteSelected"
@@ -151,8 +159,6 @@ const draggedElement = ref<Element | null>(null)
 const draggedIndex = ref<number>(-1)
 const dragOverIndex = ref<number>(-1)
 const dragPosition = ref<'above' | 'below'>('below')
-const hiddenElements = ref<Set<string>>(new Set())
-const lockedElements = ref<Set<string>>(new Set())
 
 // Computed
 const elements = computed(() => editorStore.elements)
@@ -169,11 +175,13 @@ const isSelected = (elementId: string) => {
 }
 
 const isVisible = (elementId: string) => {
-  return !hiddenElements.value.has(elementId)
+  const element = elements.value.find(el => el.id === elementId)
+  return element?.visible ?? true
 }
 
 const isLocked = (elementId: string) => {
-  return lockedElements.value.has(elementId)
+  const element = elements.value.find(el => el.id === elementId)
+  return element?.locked ?? false
 }
 
 const getElementIcon = (kind: string) => {
@@ -219,44 +227,61 @@ const handleElementSelect = (elementId: string, event: MouseEvent) => {
   }
 }
 
-const toggleVisibility = (elementId: string) => {
-  if (hiddenElements.value.has(elementId)) {
-    hiddenElements.value.delete(elementId)
-    // Show element on canvas
-    editorStore.setElementVisibility(elementId, true)
+const toggleVisibility = async (elementId: string) => {
+  console.log('toggleVisibility called for element:', elementId)
+  const element = elements.value.find(el => el.id === elementId)
+  if (element) {
+    const newVisibility = !element.visible
+    console.log('Setting visibility from', element.visible, 'to', newVisibility)
+    try {
+      await editorStore.setElementVisibility(elementId, newVisibility)
+      console.log('Visibility toggle successful')
+    } catch (error) {
+      console.error('Failed to toggle visibility:', error)
+    }
   } else {
-    hiddenElements.value.add(elementId)
-    // Hide element on canvas
-    editorStore.setElementVisibility(elementId, false)
+    console.error('Element not found for visibility toggle:', elementId)
   }
 }
 
-const toggleLock = (elementId: string) => {
-  if (lockedElements.value.has(elementId)) {
-    lockedElements.value.delete(elementId)
-    // Unlock element on canvas
-    editorStore.setElementLocked(elementId, false)
+const toggleLock = async (elementId: string) => {
+  console.log('toggleLock called for element:', elementId)
+  const element = elements.value.find(el => el.id === elementId)
+  if (element) {
+    const newLocked = !element.locked
+    console.log('Setting locked from', element.locked, 'to', newLocked)
+    try {
+      await editorStore.setElementLocked(elementId, newLocked)
+      console.log('Lock toggle successful')
+    } catch (error) {
+      console.error('Failed to toggle lock:', error)
+    }
   } else {
-    lockedElements.value.add(elementId)
-    // Lock element on canvas
-    editorStore.setElementLocked(elementId, true)
+    console.error('Element not found for lock toggle:', elementId)
   }
 }
 
-const handleDeleteElement = (elementId: string) => {
-  editorStore.deleteElement(elementId)
-  // Remove from local state
-  hiddenElements.value.delete(elementId)
-  lockedElements.value.delete(elementId)
+const handleDeleteElement = async (elementId: string) => {
+  console.log('handleDeleteElement called for:', elementId)
+  try {
+    await editorStore.deleteElement(elementId)
+    console.log('Element deletion successful')
+  } catch (error) {
+    console.error('Failed to delete element:', error)
+  }
 }
 
-const handleDeleteSelected = () => {
+const handleDeleteSelected = async () => {
+  console.log('handleDeleteSelected called for:', selectedElementIds.value)
   const elementsToDelete = [...selectedElementIds.value]
-  elementsToDelete.forEach(id => {
-    editorStore.deleteElement(id)
-    hiddenElements.value.delete(id)
-    lockedElements.value.delete(id)
-  })
+  try {
+    for (const id of elementsToDelete) {
+      await editorStore.deleteElement(id)
+    }
+    console.log('Selected elements deletion successful')
+  } catch (error) {
+    console.error('Failed to delete selected elements:', error)
+  }
 }
 
 const clearSelection = () => {
@@ -274,10 +299,13 @@ const handleDragStart = (element: Element, index: number, event: DragEvent) => {
   }
 }
 
-const handleDrop = (targetElement: Element, event: DragEvent) => {
+const handleDrop = async (targetElement: Element, event: DragEvent) => {
   event.preventDefault()
   
+  console.log('handleDrop called - dragged:', draggedElement.value?.id, 'target:', targetElement.id, 'position:', dragPosition.value)
+  
   if (!draggedElement.value || draggedElement.value.id === targetElement.id) {
+    console.log('Drag operation cancelled - same element or no dragged element')
     return
   }
 
@@ -304,8 +332,15 @@ const handleDrop = (targetElement: Element, event: DragEvent) => {
     }
   }
 
-  // Update element z-index
-  editorStore.updateElement(draggedElement.value.id, { z: newZ })
+  console.log('Updating element z-index from', draggedElement.value.z, 'to', newZ)
+
+  try {
+    // Update element z-index
+    await editorStore.updateElement(draggedElement.value.id, { z: newZ })
+    console.log('Z-index update successful')
+  } catch (error) {
+    console.error('Failed to update z-index:', error)
+  }
   
   // Reset drag state
   draggedElement.value = null
@@ -328,6 +363,19 @@ const handleDragOver = (event: DragEvent, index: number) => {
 
 const handleDragLeave = () => {
   dragOverIndex.value = -1
+}
+
+const debugLogState = () => {
+  console.log('=== LAYER PANEL DEBUG STATE ===')
+  console.log('Total elements:', elements.value.length)
+  console.log('Selected element IDs:', selectedElementIds.value)
+  console.log('Elements detail:')
+  elements.value.forEach((el, index) => {
+    console.log(`  ${index}: ID=${el.id}, visible=${el.visible}, locked=${el.locked}, z=${el.z}, kind=${el.kind}`)
+  })
+  console.log('Current board:', editorStore.currentPageId)
+  console.log('Is edit mode:', editorStore.loading)
+  console.log('=== END DEBUG STATE ===')
 }
 </script>
 

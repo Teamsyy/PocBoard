@@ -21,7 +21,7 @@ func NewElementService(db *gorm.DB) *ElementService {
 }
 
 // CreateElement creates a new element on a page
-func (s *ElementService) CreateElement(pageID uuid.UUID, kind string, x, y, w, h, rotation float64, payload interface{}) (*models.Element, error) {
+func (s *ElementService) CreateElement(pageID uuid.UUID, kind string, x, y, w, h, rotation float64, visible, locked *bool, payload interface{}) (*models.Element, error) {
 	// Get the next z-index for this page
 	var maxZ int
 	err := s.db.Model(&models.Element{}).
@@ -38,6 +38,17 @@ func (s *ElementService) CreateElement(pageID uuid.UUID, kind string, x, y, w, h
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
+	// Set default values
+	visibleValue := true
+	if visible != nil {
+		visibleValue = *visible
+	}
+
+	lockedValue := false
+	if locked != nil {
+		lockedValue = *locked
+	}
+
 	element := &models.Element{
 		PageID:   pageID,
 		Kind:     kind,
@@ -47,6 +58,8 @@ func (s *ElementService) CreateElement(pageID uuid.UUID, kind string, x, y, w, h
 		H:        h,
 		Rotation: rotation,
 		Z:        maxZ,
+		Visible:  visibleValue,
+		Locked:   lockedValue,
 		Payload:  datatypes.JSON(payloadJSON),
 	}
 

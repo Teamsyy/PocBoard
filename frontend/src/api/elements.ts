@@ -9,6 +9,8 @@ export interface CreateElementRequest {
   h: number
   rotation?: number
   z?: number
+  visible?: boolean
+  locked?: boolean
   payload: ElementPayload
 }
 
@@ -19,6 +21,8 @@ export interface UpdateElementRequest {
   h?: number
   rotation?: number
   z?: number
+  visible?: boolean
+  locked?: boolean
   payload?: ElementPayload
 }
 

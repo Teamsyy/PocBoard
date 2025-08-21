@@ -14,6 +14,8 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor to add edit token if available
 apiClient.interceptors.request.use(
   (config) => {
+    console.log('API Request:', config.method?.toUpperCase(), config.url, config.data)
+    
     // Get edit token from URL params or stored state
     const urlParams = new URLSearchParams(window.location.search)
     const editToken = urlParams.get('edit_token')
@@ -27,6 +29,7 @@ apiClient.interceptors.request.use(
     return config
   },
   (error) => {
+    console.error('API Request Error:', error)
     return Promise.reject(error)
   }
 )
@@ -34,9 +37,12 @@ apiClient.interceptors.request.use(
 // Response interceptor for consistent error handling
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
+    console.log('API Response:', response.status, response.config.url, response.data)
     return response
   },
   (error: AxiosError) => {
+    console.error('API Error:', error.response?.status, error.config?.url, error.response?.data)
+    
     // Transform axios errors to our API response format
     const apiError: ApiResponse = {
       error: {

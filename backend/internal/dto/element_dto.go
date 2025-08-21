@@ -12,6 +12,8 @@ type CreateElementRequest struct {
 	W        float64     `json:"w" validate:"required,gt=0"`
 	H        float64     `json:"h" validate:"required,gt=0"`
 	Rotation float64     `json:"rotation" validate:"omitempty"`
+	Visible  *bool       `json:"visible,omitempty"`
+	Locked   *bool       `json:"locked,omitempty"`
 	Payload  interface{} `json:"payload" validate:"required"`
 }
 
@@ -22,6 +24,9 @@ type UpdateElementRequest struct {
 	W        *float64    `json:"w,omitempty" validate:"omitempty,gt=0"`
 	H        *float64    `json:"h,omitempty" validate:"omitempty,gt=0"`
 	Rotation *float64    `json:"rotation,omitempty"`
+	Z        *int        `json:"z,omitempty"`
+	Visible  *bool       `json:"visible,omitempty"`
+	Locked   *bool       `json:"locked,omitempty"`
 	Payload  interface{} `json:"payload,omitempty"`
 }
 
@@ -38,16 +43,20 @@ type ElementZIndexUpdate struct {
 
 // ElementResponse represents an element in the response
 type ElementResponse struct {
-	ID       uuid.UUID   `json:"id"`
-	PageID   uuid.UUID   `json:"page_id"`
-	Kind     string      `json:"kind"`
-	X        float64     `json:"x"`
-	Y        float64     `json:"y"`
-	W        float64     `json:"w"`
-	H        float64     `json:"h"`
-	Rotation float64     `json:"rotation"`
-	Z        int         `json:"z"`
-	Payload  interface{} `json:"payload"`
+	ID        uuid.UUID   `json:"id"`
+	PageID    uuid.UUID   `json:"page_id"`
+	Kind      string      `json:"kind"`
+	X         float64     `json:"x"`
+	Y         float64     `json:"y"`
+	W         float64     `json:"w"`
+	H         float64     `json:"h"`
+	Rotation  float64     `json:"rotation"`
+	Z         int         `json:"z"`
+	Visible   bool        `json:"visible"`
+	Locked    bool        `json:"locked"`
+	Payload   interface{} `json:"payload"`
+	CreatedAt string      `json:"created_at"`
+	UpdatedAt string      `json:"updated_at"`
 }
 
 // ElementsListResponse represents the response for listing elements

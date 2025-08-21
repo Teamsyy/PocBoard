@@ -7,6 +7,7 @@ export { default as ErrorMessage } from './ErrorMessage.vue'
 export { default as EmptyState } from './EmptyState.vue'
 export { default as SaveStatus } from './SaveStatus.vue'
 export { default as ImageViewer } from './ImageViewer.vue'
+export { default as StickerPicker } from './StickerPicker.vue'
 
 // Canvas components
 export { default as CanvasEditor } from './CanvasEditor.vue'

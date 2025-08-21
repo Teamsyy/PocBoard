@@ -18,6 +18,8 @@ type Element struct {
 	H         float64        `gorm:"not null" json:"h"`
 	Rotation  float64        `gorm:"default:0" json:"rotation"`
 	Z         int            `gorm:"default:0;index" json:"z"`
+	Visible   bool           `gorm:"default:true" json:"visible"`
+	Locked    bool           `gorm:"default:false" json:"locked"`
 	Payload   datatypes.JSON `gorm:"type:jsonb" json:"payload"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`

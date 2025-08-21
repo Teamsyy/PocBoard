@@ -393,6 +393,14 @@
 
   <!-- Save Status Indicator -->
   <SaveStatus />
+
+  <!-- Sticker Picker Modal -->
+  <StickerPicker 
+    :is-visible="showStickerPicker"
+    :board-id="boardId"
+    @close="showStickerPicker = false"
+    @select="handleStickerSelect"
+  />
 </template>
 
 <script setup lang="ts">
@@ -400,7 +408,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBoardsStore } from '@/stores/boards'
 import { useEditorStore } from '@/stores/editor'
-import { CanvasEditor, Toolbar, SidebarLayers, ImageUploader, SaveStatus, ShareExportBar } from '@/components'
+import { CanvasEditor, Toolbar, SidebarLayers, ImageUploader, SaveStatus, ShareExportBar, StickerPicker } from '@/components'
 
 interface Props {
   boardId: string
@@ -418,6 +426,7 @@ const editorStore = useEditorStore()
 const editingTitle = ref(false)
 const showShareModal = ref(false)
 const showMobileSidebar = ref(false)
+const showStickerPicker = ref(false)
 const currentPageIndex = ref(0)
 const canvasEditor = ref<InstanceType<typeof CanvasEditor>>()
 
@@ -536,13 +545,14 @@ const addShapeElement = () => {
 
 const addStickerElement = () => {
   if (!isEditMode.value) return
-  // For now, we'll add a placeholder sticker
-  // In later tasks, this will open a sticker picker
-  const placeholderUrl = 'https://via.placeholder.com/80x80/F59E0B/FFFFFF?text=😊'
-  if (canvasEditor.value) {
-    ;(canvasEditor.value as any).addStickerElement(placeholderUrl, 'emoji', 'faces')
-  }
+  showStickerPicker.value = true
   showMobileSidebar.value = false
+}
+
+const handleStickerSelect = (sticker: { url: string, stickerType: string, category: string }) => {
+  if (canvasEditor.value) {
+    ;(canvasEditor.value as any).addStickerElement(sticker.url, sticker.stickerType, sticker.category)
+  }
 }
 
 const undo = () => {

@@ -80,7 +80,7 @@ func (h *ElementHandler) CreateElement(c *fiber.Ctx) error {
 	}
 
 	// Create element
-	element, err := h.elementService.CreateElement(pageID, req.Kind, req.X, req.Y, req.W, req.H, req.Rotation, req.Payload)
+	element, err := h.elementService.CreateElement(pageID, req.Kind, req.X, req.Y, req.W, req.H, req.Rotation, req.Visible, req.Locked, req.Payload)
 	if err != nil {
 		logger.Errorw("Failed to create element", "error", err)
 		return utils.SendInternalError(c, "Failed to create element", nil)
@@ -88,16 +88,20 @@ func (h *ElementHandler) CreateElement(c *fiber.Ctx) error {
 
 	// Convert to response DTO
 	response := dto.ElementResponse{
-		ID:       element.ID,
-		PageID:   element.PageID,
-		Kind:     element.Kind,
-		X:        element.X,
-		Y:        element.Y,
-		W:        element.W,
-		H:        element.H,
-		Rotation: element.Rotation,
-		Z:        element.Z,
-		Payload:  element.Payload,
+		ID:        element.ID,
+		PageID:    element.PageID,
+		Kind:      element.Kind,
+		X:         element.X,
+		Y:         element.Y,
+		W:         element.W,
+		H:         element.H,
+		Rotation:  element.Rotation,
+		Z:         element.Z,
+		Visible:   element.Visible,
+		Locked:    element.Locked,
+		Payload:   element.Payload,
+		CreatedAt: element.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt: element.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	logger.Infow("Element created successfully", "elementId", element.ID, "pageId", pageID)
@@ -168,16 +172,20 @@ func (h *ElementHandler) GetElementsByPage(c *fiber.Ctx) error {
 	elementResponses := make([]dto.ElementResponse, len(elements))
 	for i, element := range elements {
 		elementResponses[i] = dto.ElementResponse{
-			ID:       element.ID,
-			PageID:   element.PageID,
-			Kind:     element.Kind,
-			X:        element.X,
-			Y:        element.Y,
-			W:        element.W,
-			H:        element.H,
-			Rotation: element.Rotation,
-			Z:        element.Z,
-			Payload:  element.Payload,
+			ID:        element.ID,
+			PageID:    element.PageID,
+			Kind:      element.Kind,
+			X:         element.X,
+			Y:         element.Y,
+			W:         element.W,
+			H:         element.H,
+			Rotation:  element.Rotation,
+			Z:         element.Z,
+			Visible:   element.Visible,
+			Locked:    element.Locked,
+			Payload:   element.Payload,
+			CreatedAt: element.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt: element.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 	}
 
@@ -277,6 +285,15 @@ func (h *ElementHandler) UpdateElement(c *fiber.Ctx) error {
 	if req.Rotation != nil {
 		updates["rotation"] = *req.Rotation
 	}
+	if req.Z != nil {
+		updates["z"] = *req.Z
+	}
+	if req.Visible != nil {
+		updates["visible"] = *req.Visible
+	}
+	if req.Locked != nil {
+		updates["locked"] = *req.Locked
+	}
 	if req.Payload != nil {
 		updates["payload"] = req.Payload
 	}
@@ -293,16 +310,20 @@ func (h *ElementHandler) UpdateElement(c *fiber.Ctx) error {
 
 	// Convert to response DTO
 	response := dto.ElementResponse{
-		ID:       element.ID,
-		PageID:   element.PageID,
-		Kind:     element.Kind,
-		X:        element.X,
-		Y:        element.Y,
-		W:        element.W,
-		H:        element.H,
-		Rotation: element.Rotation,
-		Z:        element.Z,
-		Payload:  element.Payload,
+		ID:        element.ID,
+		PageID:    element.PageID,
+		Kind:      element.Kind,
+		X:         element.X,
+		Y:         element.Y,
+		W:         element.W,
+		H:         element.H,
+		Rotation:  element.Rotation,
+		Z:         element.Z,
+		Visible:   element.Visible,
+		Locked:    element.Locked,
+		Payload:   element.Payload,
+		CreatedAt: element.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt: element.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	logger.Infow("Element updated successfully", "elementId", elementID)

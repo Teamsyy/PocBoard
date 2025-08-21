@@ -134,30 +134,3 @@ make setup            # Initial setup and start services
 4. **View logs** with `make logs` if needed
 5. **Run tests** with `make backend-test` or `make frontend-test`
 
-## Database Schema
-
-The application uses PostgreSQL with the following main tables:
-- `boards`: Journal boards with edit/public tokens
-- `pages`: Pages within boards with ordering
-- `elements`: Canvas elements with JSONB payload for flexibility
-
-## API Endpoints
-
-The backend provides RESTful API endpoints for:
-- Board management (create, read, update)
-- Page management (CRUD operations)
-- Element management (CRUD with batch operations)
-- File upload handling
-- Recap/analytics data
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `make backend-test && make frontend-test`
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.

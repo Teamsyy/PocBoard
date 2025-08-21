@@ -333,15 +333,17 @@ export const useEditorStore = defineStore('editor', () => {
       
       // Handle 404 - element doesn't exist on server
       if (err.status === 404 || err.response?.status === 404) {
-        console.warn('Element not found on server, removing from local state:', elementId)
+        console.debug('Element was deleted, cleaning up local state:', elementId)
         // Remove element from local state since it doesn't exist on server
         const elementIndex = elements.value.findIndex(el => el.id === elementId)
         if (elementIndex !== -1) {
           elements.value.splice(elementIndex, 1)
+          console.debug('Removed deleted element from local state')
         }
-        saveStatus.value = 'error'
-        saveError.value = 'Element not found on server and was removed locally'
-        error.value = saveError.value
+        // Don't set error status for this case - it's expected behavior
+        if (pendingSaves.value.size === 0) {
+          saveStatus.value = 'idle'
+        }
         return
       }
       

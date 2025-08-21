@@ -1,0 +1,65 @@
+version: '3.8'
+
+# Production overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-your-secure-password-here}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    # Remove init script in production (handle migrations separately)
+    # volumes:
+    #   - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+
+  backend:
+    build:
+      target: production
+    restart: always
+    environment:
+      - GO_ENV=production
+      - DB_PASSWORD=${DB_PASSWORD:-your-secure-password-here}
+    # Remove development volumes
+    volumes:
+      - ./uploads:/app/uploads
+    # Add resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  frontend:
+    build:
+      target: production
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8080}
+    # Remove development volumes
+    volumes: []
+    ports:
+      - "80:80"
+    # Add resource limits  
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # Remove PgAdmin in production
+  pgadmin:
+    profiles:
+      - disabled
+
+volumes:
+  postgres_prod_data:
+    driver: local

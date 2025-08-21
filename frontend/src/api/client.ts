@@ -41,14 +41,30 @@ apiClient.interceptors.response.use(
     return response
   },
   (error: AxiosError) => {
-    console.error('API Error:', error.response?.status, error.config?.url, error.response?.data)
+    // Only log non-404 errors to reduce console noise for expected element deletions
+    if (error.response?.status !== 404) {
+      console.error('API Error:', error.response?.status, error.config?.url, error.response?.data)
+    } else {
+      // Log 404s at debug level for element operations (these are handled gracefully)
+      if (error.config?.url?.includes('/elements/')) {
+        console.debug('Element not found (handled):', error.config.url)
+      } else {
+        console.error('API Error:', error.response?.status, error.config?.url, error.response?.data)
+      }
+    }
     
-    // Transform axios errors to our API response format
-    const apiError: ApiResponse = {
+    // Transform axios errors to our API response format while preserving status
+    const apiError: ApiResponse & { status?: number; response?: { status: number } } = {
       error: {
         code: 'NETWORK_ERROR',
         message: 'Network request failed',
       }
+    }
+
+    // Preserve the HTTP status code for proper error handling
+    if (error.response?.status) {
+      apiError.status = error.response.status
+      apiError.response = { status: error.response.status }
     }
 
     if (error.response?.data) {

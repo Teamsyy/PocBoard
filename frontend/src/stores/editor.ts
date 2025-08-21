@@ -10,7 +10,7 @@ export const useEditorStore = defineStore('editor', () => {
   const undoStack = ref<CanvasState[]>([])
   const redoStack = ref<CanvasState[]>([])
   const snapToGrid = ref(true)
-  const canvas = ref<fabric.Canvas | null>(null)
+  const canvas = ref<HTMLElement | null>(null)
   const currentPageId = ref<string | null>(null)
   const elements = ref<Element[]>([])
   const loading = ref(false)
@@ -80,8 +80,8 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // Actions
-  const setCanvas = (fabricCanvas: fabric.Canvas) => {
-    canvas.value = fabricCanvas
+  const setCanvas = (canvasElement: HTMLElement | null) => {
+    canvas.value = canvasElement
   }
 
   const setCurrentPage = (pageId: string) => {
@@ -251,7 +251,7 @@ export const useEditorStore = defineStore('editor', () => {
     debouncedSave(elements.value[index], isPositionUpdate)
   }
 
-  const saveElement = async (element: Element, attempt = 1): Promise<void> => {
+  const saveElement = async (element: Element): Promise<void> => {
     const boardsStore = useBoardsStore()
     
     if (!boardsStore.currentBoard || !currentPageId.value || !boardsStore.editToken) {
@@ -316,7 +316,7 @@ export const useEditorStore = defineStore('editor', () => {
         console.log(`Retrying save for element ${elementId} (attempt ${nextAttempt}/${MAX_RETRY_ATTEMPTS}) in ${delay}ms`)
         
         setTimeout(() => {
-          saveElement(element, nextAttempt)
+          saveElement(element)
         }, delay)
         
         return
@@ -471,40 +471,6 @@ export const useEditorStore = defineStore('editor', () => {
         await updateElement(element.id, {
           payload: payload
         })
-        
-        // Update fabric object if canvas is available
-        if (canvas.value) {
-          const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
-          if (fabricObject && fabricObject.type === 'i-text') {
-            // Map our property names to Fabric.js property names and convert values
-            let fabricProperty: string
-            let fabricValue: any = value
-            
-            if (property === 'bold') {
-              fabricProperty = 'fontWeight'
-              fabricValue = value ? 'bold' : 'normal'
-            } else if (property === 'italic') {
-              fabricProperty = 'fontStyle'
-              fabricValue = value ? 'italic' : 'normal'
-            } else if (property === 'color') {
-              fabricProperty = 'fill'
-              fabricValue = value
-            } else if (property === 'fontFamily') {
-              fabricProperty = 'fontFamily'
-              fabricValue = value
-            } else if (property === 'fontSize') {
-              fabricProperty = 'fontSize'
-              fabricValue = value
-            } else {
-              fabricProperty = property
-              fabricValue = value
-            }
-            
-            console.log(`Updating fabric object ${fabricProperty} to:`, fabricValue)
-            fabricObject.set(fabricProperty, fabricValue)
-            canvas.value.renderAll()
-          }
-        }
       }
     })
   }
@@ -520,14 +486,6 @@ export const useEditorStore = defineStore('editor', () => {
       if (element) {
         const maxZ = Math.max(...elements.value.map(el => el.z))
         await updateElement(element.id, { z: maxZ + 1 })
-        
-        // Update fabric object
-        if (canvas.value) {
-          const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
-          if (fabricObject) {
-            canvas.value.bringToFront(fabricObject)
-          }
-        }
       }
     })
   }
@@ -544,14 +502,6 @@ export const useEditorStore = defineStore('editor', () => {
         if (higherElements.length > 0) {
           const nextZ = Math.min(...higherElements.map(el => el.z))
           await updateElement(element.id, { z: nextZ + 1 })
-          
-          // Update fabric object
-          if (canvas.value) {
-            const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
-            if (fabricObject) {
-              canvas.value.bringForward(fabricObject)
-            }
-          }
         }
       }
     })
@@ -569,14 +519,6 @@ export const useEditorStore = defineStore('editor', () => {
         if (lowerElements.length > 0) {
           const prevZ = Math.max(...lowerElements.map(el => el.z))
           await updateElement(element.id, { z: prevZ - 1 })
-          
-          // Update fabric object
-          if (canvas.value) {
-            const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
-            if (fabricObject) {
-              canvas.value.sendBackwards(fabricObject)
-            }
-          }
         }
       }
     })
@@ -592,14 +534,6 @@ export const useEditorStore = defineStore('editor', () => {
       if (element) {
         const minZ = Math.min(...elements.value.map(el => el.z))
         await updateElement(element.id, { z: minZ - 1 })
-        
-        // Update fabric object
-        if (canvas.value) {
-          const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
-          if (fabricObject) {
-            canvas.value.sendToBack(fabricObject)
-          }
-        }
       }
     })
   }
@@ -609,24 +543,15 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   const setElementVisibility = (elementId: string, visible: boolean) => {
-    if (canvas.value) {
-      const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
-      if (fabricObject) {
-        fabricObject.visible = visible
-        canvas.value.renderAll()
-      }
-    }
+    // With vue-drag-resize, visibility would be handled through v-show in the template
+    // For now, we'll remove this since Element type doesn't have visible property
+    console.log(`Setting element ${elementId} visibility to ${visible}`)
   }
 
   const setElementLocked = (elementId: string, locked: boolean) => {
-    if (canvas.value) {
-      const fabricObject = canvas.value.getObjects().find((obj: any) => obj.elementId === elementId)
-      if (fabricObject) {
-        fabricObject.selectable = !locked
-        fabricObject.evented = !locked
-        canvas.value.renderAll()
-      }
-    }
+    // With vue-drag-resize, lock functionality is handled through the 'active' prop
+    // For now, we'll remove this since Element type doesn't have locked property
+    console.log(`Setting element ${elementId} locked to ${locked}`)
   }
 
   const deleteElement = async (elementId: string) => {
@@ -700,6 +625,7 @@ export const useEditorStore = defineStore('editor', () => {
     updateElement,
     deleteElements,
     deleteElement,
+    saveElement,
     reorderElements,
     uploadImage,
     toggleSnapToGrid,

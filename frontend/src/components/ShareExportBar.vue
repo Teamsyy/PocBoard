@@ -17,7 +17,11 @@
               :value="editUrl"
               readonly
               class="bg-transparent border-none outline-none text-gray-800 font-mono text-xs flex-1 min-w-0"
-              @focus="$event.target.select()"
+              @focus="(event) => {
+                if (event.target && 'select' in event.target) {
+                  (event.target as HTMLInputElement).select()
+                }
+              }"
             />
           </div>
           <button
@@ -48,7 +52,11 @@
               :value="publicUrl"
               readonly
               class="bg-transparent border-none outline-none text-gray-800 font-mono text-xs flex-1 min-w-0"
-              @focus="$event.target.select()"
+              @focus="(event) => {
+                if (event.target && 'select' in event.target) {
+                  (event.target as HTMLInputElement).select()
+                }
+              }"
             />
           </div>
           <button
@@ -238,8 +246,8 @@ const exportCurrentPage = async () => {
 
   try {
     const currentPage = boardsStore.sortedPages.find(p => p.id === editorStore.currentPageId)
-    const pageName = currentPage?.name || 'page'
-    const boardName = boardsStore.currentBoard.name || 'board'
+    const pageName = currentPage?.title || 'page'
+    const boardName = boardsStore.currentBoard.title || 'board'
     const fileName = `${boardName}-${pageName}.png`
 
     await exportCanvasToPng(fileName)
@@ -262,7 +270,7 @@ const exportAllPages = async () => {
 
   try {
     const currentPageId = editorStore.currentPageId
-    const boardName = boardsStore.currentBoard.name || 'board'
+    const boardName = boardsStore.currentBoard.title || 'board'
     
     for (let i = 0; i < boardsStore.sortedPages.length; i++) {
       const page = boardsStore.sortedPages[i]
@@ -275,7 +283,7 @@ const exportAllPages = async () => {
         await new Promise(resolve => setTimeout(resolve, 500))
       }
       
-      const fileName = `${boardName}-${page.name || `page-${i + 1}`}.png`
+      const fileName = `${boardName}-${page.title || `page-${i + 1}`}.png`
       await exportCanvasToPng(fileName)
     }
     

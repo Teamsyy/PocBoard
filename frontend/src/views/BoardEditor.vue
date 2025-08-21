@@ -524,13 +524,13 @@ const switchToPage = async () => {
 // Tool methods
 const addTextElement = () => {
   if (!isEditMode.value || !canvasEditor.value) return
-  canvasEditor.value.addTextElement()
+  ;(canvasEditor.value as any).addTextElement()
   showMobileSidebar.value = false
 }
 
 const addShapeElement = () => {
   if (!isEditMode.value || !canvasEditor.value) return
-  canvasEditor.value.addShapeElement('rectangle')
+  ;(canvasEditor.value as any).addShapeElement('rectangle')
   showMobileSidebar.value = false
 }
 
@@ -540,7 +540,7 @@ const addStickerElement = () => {
   // In later tasks, this will open a sticker picker
   const placeholderUrl = 'https://via.placeholder.com/80x80/F59E0B/FFFFFF?text=😊'
   if (canvasEditor.value) {
-    canvasEditor.value.addStickerElement(placeholderUrl, 'emoji', 'faces')
+    ;(canvasEditor.value as any).addStickerElement(placeholderUrl, 'emoji', 'faces')
   }
   showMobileSidebar.value = false
 }

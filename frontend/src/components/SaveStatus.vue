@@ -137,7 +137,11 @@ const pendingCount = computed(() => editorStore.pendingSaves.size)
 const lastSaveTime = computed(() => editorStore.lastSaveTime)
 
 const shouldShowStatus = computed(() => {
-  return status.value !== 'idle' || (status.value === 'saved' && Date.now() - (lastSaveTime.value?.getTime() || 0) < 3000)
+  if (status.value === 'idle') return false
+  if (status.value === 'saved') {
+    return Date.now() - (lastSaveTime.value?.getTime() || 0) < 3000
+  }
+  return true
 })
 
 const statusClasses = computed(() => {

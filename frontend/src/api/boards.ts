@@ -3,10 +3,12 @@ import type { Board, ApiResponse } from '@/types'
 
 export interface CreateBoardRequest {
   title: string
+  description?: string
 }
 
 export interface UpdateBoardRequest {
   title?: string
+  description?: string
 }
 
 export interface BoardResponse {
@@ -50,5 +52,30 @@ export const boardsApi = {
       throw response.data
     }
     return response.data.data!
+  },
+
+  // Get all boards (for overview)
+  async getAll(): Promise<Board[]> {
+    const response = await apiClient.get<ApiResponse<Board[]>>('/boards')
+    if (response.data.error) {
+      throw response.data
+    }
+    return response.data.data!
+  },
+
+  // Delete board
+  async delete(boardId: string, editToken: string): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<void>>(`/boards/${boardId}?edit_token=${editToken}`)
+    if (response.data.error) {
+      throw response.data
+    }
+  },
+
+  // Delete all boards
+  async deleteAll(boards: Board[]): Promise<void> {
+    const deletePromises = boards.map(board => 
+      this.delete(board.id, board.edit_token)
+    )
+    await Promise.all(deletePromises)
   },
 }

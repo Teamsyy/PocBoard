@@ -19,10 +19,11 @@ func NewBoardService(db *gorm.DB) *BoardService {
 }
 
 // CreateBoard creates a new board with generated tokens
-func (s *BoardService) CreateBoard(title, skin string) (*models.Board, error) {
+func (s *BoardService) CreateBoard(title, description, skin string) (*models.Board, error) {
 	board := &models.Board{
-		Title: title,
-		Skin:  skin,
+		Title:       title,
+		Description: description,
+		Skin:        skin,
 	}
 
 	if err := s.db.Create(board).Error; err != nil {
@@ -84,7 +85,7 @@ func (s *BoardService) GetBoardByID(boardID uuid.UUID) (*models.Board, error) {
 }
 
 // UpdateBoard updates a board's properties
-func (s *BoardService) UpdateBoard(boardID uuid.UUID, title, skin *string) (*models.Board, error) {
+func (s *BoardService) UpdateBoard(boardID uuid.UUID, title, description, skin *string) (*models.Board, error) {
 	var board models.Board
 	if err := s.db.Where("id = ?", boardID).First(&board).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -96,6 +97,9 @@ func (s *BoardService) UpdateBoard(boardID uuid.UUID, title, skin *string) (*mod
 	updates := make(map[string]interface{})
 	if title != nil {
 		updates["title"] = *title
+	}
+	if description != nil {
+		updates["description"] = *description
 	}
 	if skin != nil {
 		updates["skin"] = *skin
@@ -182,4 +186,51 @@ func (s *BoardService) ValidateBoardExists(boardID uuid.UUID) error {
 	}
 
 	return nil
+}
+
+// GetAllBoards retrieves all boards with page count
+func (s *BoardService) GetAllBoards() ([]models.Board, error) {
+	var boards []models.Board
+	err := s.db.Preload("Pages").Find(&boards).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all boards: %w", err)
+	}
+
+	return boards, nil
+}
+
+// DeleteBoard deletes a board and all its associated data
+func (s *BoardService) DeleteBoard(boardID uuid.UUID) error {
+	// Start a transaction to ensure all related data is deleted
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// First, delete all elements in all pages of this board
+	if err := tx.Exec(`
+		DELETE FROM elements 
+		WHERE page_id IN (
+			SELECT id FROM pages WHERE board_id = ?
+		)
+	`, boardID).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete board elements: %w", err)
+	}
+
+	// Then delete all pages of this board
+	if err := tx.Where("board_id = ?", boardID).Delete(&models.Page{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete board pages: %w", err)
+	}
+
+	// Finally delete the board itself
+	if err := tx.Where("id = ?", boardID).Delete(&models.Board{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete board: %w", err)
+	}
+
+	return tx.Commit().Error
 }

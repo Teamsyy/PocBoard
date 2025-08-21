@@ -6,8 +6,17 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      redirect: '/boards'
+    },
+    {
+      path: '/landing',
       name: 'landing',
       component: Landing,
+    },
+    {
+      path: '/boards',
+      name: 'board-overview',
+      component: () => import('@/views/BoardOverview.vue'),
     },
     {
       path: '/board/:boardId/edit',

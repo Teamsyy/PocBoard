@@ -8,24 +8,28 @@ import (
 
 // CreateBoardRequest represents the request to create a new board
 type CreateBoardRequest struct {
-	Title string `json:"title" validate:"required,min=1,max=255"`
-	Skin  string `json:"skin,omitempty" validate:"omitempty,oneof=default wood notebook cork"`
+	Title       string `json:"title" validate:"required,min=1,max=255"`
+	Description string `json:"description,omitempty" validate:"omitempty,max=500"`
+	Skin        string `json:"skin,omitempty" validate:"omitempty,oneof=default wood notebook cork"`
 }
 
 // UpdateBoardRequest represents the request to update a board
 type UpdateBoardRequest struct {
-	Title *string `json:"title,omitempty" validate:"omitempty,min=1,max=255"`
-	Skin  *string `json:"skin,omitempty" validate:"omitempty,oneof=default wood notebook cork"`
+	Title       *string `json:"title,omitempty" validate:"omitempty,min=1,max=255"`
+	Description *string `json:"description,omitempty" validate:"omitempty,max=500"`
+	Skin        *string `json:"skin,omitempty" validate:"omitempty,oneof=default wood notebook cork"`
 }
 
 // BoardResponse represents a board in API responses
 type BoardResponse struct {
 	ID          uuid.UUID      `json:"id"`
 	Title       string         `json:"title"`
+	Description string         `json:"description,omitempty"`
 	Skin        string         `json:"skin"`
 	PublicToken uuid.UUID      `json:"public_token"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
+	PageCount   int            `json:"pageCount"`
 	Pages       []PageResponse `json:"pages,omitempty"`
 }
 
@@ -40,10 +44,12 @@ type CreateBoardResponse struct {
 type BoardWithTokensResponse struct {
 	ID          uuid.UUID      `json:"id"`
 	Title       string         `json:"title"`
+	Description string         `json:"description,omitempty"`
 	Skin        string         `json:"skin"`
 	EditToken   uuid.UUID      `json:"edit_token"`
 	PublicToken uuid.UUID      `json:"public_token"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
+	PageCount   int            `json:"pageCount"`
 	Pages       []PageResponse `json:"pages,omitempty"`
 }

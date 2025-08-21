@@ -10,6 +10,7 @@ import (
 type Board struct {
 	ID          uuid.UUID `gorm:"type:uuid;primary_key" json:"id"`
 	Title       string    `gorm:"not null" json:"title"`
+	Description string    `gorm:"type:text" json:"description"`
 	Skin        string    `gorm:"default:'default'" json:"skin"`
 	EditToken   uuid.UUID `gorm:"type:uuid;unique;not null" json:"-"`
 	PublicToken uuid.UUID `gorm:"type:uuid;unique;not null" json:"public_token"`

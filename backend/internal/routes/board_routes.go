@@ -11,6 +11,9 @@ import (
 func SetupBoardRoutes(api fiber.Router, db *gorm.DB) {
 	boardHandler := handlers.NewBoardHandler(db)
 
+	// Board listing route (no token required)
+	api.Get("/boards", boardHandler.GetAllBoards) // GET /api/v1/boards
+
 	// Board creation route (no token required)
 	api.Post("/boards", boardHandler.CreateBoard) // POST /api/v1/boards
 
@@ -18,7 +21,8 @@ func SetupBoardRoutes(api fiber.Router, db *gorm.DB) {
 	api.Get("/boards/edit/:editToken", boardHandler.GetBoardByEditToken)       // GET /api/v1/boards/edit/:editToken
 	api.Get("/boards/public/:publicToken", boardHandler.GetBoardByPublicToken) // GET /api/v1/boards/public/:publicToken
 
-	// Board update routes (require edit token)
+	// Board update and delete routes (require edit token)
 	boards := api.Group("/boards/:boardId")
-	boards.Put("/", middleware.TokenValidationMiddleware(), boardHandler.UpdateBoard) // PUT /api/v1/boards/:boardId
+	boards.Put("/", middleware.TokenValidationMiddleware(), boardHandler.UpdateBoard)    // PUT /api/v1/boards/:boardId
+	boards.Delete("/", middleware.TokenValidationMiddleware(), boardHandler.DeleteBoard) // DELETE /api/v1/boards/:boardId
 }

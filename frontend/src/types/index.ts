@@ -2,10 +2,12 @@
 export interface Board {
   id: string
   title: string
+  description?: string
   edit_token: string
   public_token: string
   created_at: string
   updated_at: string
+  pageCount?: number
   pages?: Page[]
 }
 

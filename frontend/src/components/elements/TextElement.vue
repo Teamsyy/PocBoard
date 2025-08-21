@@ -195,7 +195,7 @@ const handleTextInput = (event: Event) => {
   
   // Store cursor position before update
   const selection = window.getSelection()
-  let range = null
+  let range: Range | null = null
   let offset = 0
   
   if (selection && selection.rangeCount > 0) {

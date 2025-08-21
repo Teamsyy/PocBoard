@@ -45,7 +45,7 @@ func (h *BoardHandler) CreateBoard(c *fiber.Ctx) error {
 	}
 
 	// Create board
-	board, err := h.boardService.CreateBoard(req.Title, req.Skin)
+	board, err := h.boardService.CreateBoard(req.Title, req.Description, req.Skin)
 	if err != nil {
 		return utils.SendDatabaseError(c, "Failed to create board")
 	}
@@ -63,11 +63,13 @@ func (h *BoardHandler) CreateBoard(c *fiber.Ctx) error {
 		Board: dto.BoardWithTokensResponse{
 			ID:          board.ID,
 			Title:       board.Title,
+			Description: board.Description,
 			Skin:        board.Skin,
 			EditToken:   board.EditToken,
 			PublicToken: board.PublicToken,
 			CreatedAt:   board.CreatedAt,
 			UpdatedAt:   board.UpdatedAt,
+			PageCount:   len(board.Pages),
 		},
 		EditURL:   editURL,
 		PublicURL: publicURL,
@@ -139,7 +141,7 @@ func (h *BoardHandler) UpdateBoard(c *fiber.Ctx) error {
 	}
 
 	// Update board
-	board, err := h.boardService.UpdateBoard(boardID, req.Title, req.Skin)
+	board, err := h.boardService.UpdateBoard(boardID, req.Title, req.Description, req.Skin)
 	if err != nil {
 		if err == utils.ErrNotFound {
 			return utils.SendNotFoundError(c, "Board not found")
@@ -152,16 +154,66 @@ func (h *BoardHandler) UpdateBoard(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": response})
 }
 
+// GetAllBoards retrieves all boards
+// GET /api/v1/boards
+func (h *BoardHandler) GetAllBoards(c *fiber.Ctx) error {
+	boards, err := h.boardService.GetAllBoards()
+	if err != nil {
+		return utils.SendDatabaseError(c, "Failed to retrieve boards")
+	}
+
+	// Convert to response format with edit tokens for board overview navigation
+	response := make([]dto.BoardWithTokensResponse, len(boards))
+	for i, board := range boards {
+		response[i] = dto.BoardWithTokensResponse{
+			ID:          board.ID,
+			Title:       board.Title,
+			Description: board.Description,
+			Skin:        board.Skin,
+			EditToken:   board.EditToken,
+			PublicToken: board.PublicToken,
+			CreatedAt:   board.CreatedAt,
+			UpdatedAt:   board.UpdatedAt,
+			PageCount:   len(board.Pages),
+		}
+	}
+
+	return c.JSON(fiber.Map{"data": response})
+}
+
+// DeleteBoard deletes a board
+// DELETE /api/v1/boards/:boardId
+func (h *BoardHandler) DeleteBoard(c *fiber.Ctx) error {
+	boardIdStr := c.Params("boardId")
+	boardId, err := uuid.Parse(boardIdStr)
+	if err != nil {
+		return utils.SendValidationError(c, "Invalid board ID", nil)
+	}
+
+	// Delete the board
+	err = h.boardService.DeleteBoard(boardId)
+	if err != nil {
+		if err == utils.ErrNotFound {
+			return utils.SendNotFoundError(c, "Board not found")
+		}
+		return utils.SendDatabaseError(c, "Failed to delete board")
+	}
+
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
 // Helper functions
 
 func convertToBoardResponse(board *models.Board) dto.BoardResponse {
 	response := dto.BoardResponse{
 		ID:          board.ID,
 		Title:       board.Title,
+		Description: board.Description,
 		Skin:        board.Skin,
 		PublicToken: board.PublicToken,
 		CreatedAt:   board.CreatedAt,
 		UpdatedAt:   board.UpdatedAt,
+		PageCount:   len(board.Pages),
 	}
 
 	// Convert pages if present
@@ -187,11 +239,13 @@ func convertToBoardWithTokensResponse(board *models.Board) dto.BoardWithTokensRe
 	response := dto.BoardWithTokensResponse{
 		ID:          board.ID,
 		Title:       board.Title,
+		Description: board.Description,
 		Skin:        board.Skin,
 		EditToken:   board.EditToken,
 		PublicToken: board.PublicToken,
 		CreatedAt:   board.CreatedAt,
 		UpdatedAt:   board.UpdatedAt,
+		PageCount:   len(board.Pages),
 	}
 
 	// Convert pages if present

@@ -44,6 +44,15 @@
               {{ loading ? 'Creating...' : 'Create Board' }}
             </button>
           </form>
+
+          <div class="mt-4 pt-4 border-t border-amber-100">
+            <router-link 
+              to="/boards" 
+              class="block w-full text-center py-2 px-4 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors duration-200"
+            >
+              Browse Existing Boards
+            </router-link>
+          </div>
         </div>
       </div>
     </div>

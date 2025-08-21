@@ -1,14 +1,16 @@
 <template>
-  <Vue3DraggableResizable
-    :initW="element.w"
-    :initH="element.h"
+  <DraggableResizable
     :x="element.x"
     :y="element.y"
-    :draggable="isEditMode"
-    :resizable="isEditMode"
-    :minW="20"
-    :minH="20"
-    :parent="true"
+    :width="element.w"
+    :height="element.h"
+    :z-index="element.z"
+    :is-selected="isSelected"
+    :is-edit-mode="isEditMode"
+    :snap-to-grid="snapToGrid"
+    :grid-size="gridSize"
+    :min-width="20"
+    :min-height="20"
     @activated="handleActivated"
     @deactivated="handleDeactivated"
     @dragging="handleDragging"
@@ -16,7 +18,6 @@
     @drag-end="handleDragEnd"
     @resize-end="handleResizeEnd"
     class="shape-element"
-    :class="{ 'edit-mode': isEditMode, 'selected': isSelected }"
   >
     <svg
       :width="element.w"
@@ -57,12 +58,12 @@
         :stroke-width="strokeWidthPercent"
       />
     </svg>
-  </Vue3DraggableResizable>
+  </DraggableResizable>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
+import DraggableResizable from '../DraggableResizable.vue'
 import type { Element, ShapePayload } from '@/types'
 
 interface Props {
@@ -154,17 +155,8 @@ onUnmounted(() => {
 
 <style scoped>
 .shape-element {
-  position: absolute;
-  cursor: pointer;
-}
-
-.shape-element.edit-mode {
-  cursor: move;
-}
-
-.shape-element.selected {
-  outline: 2px solid #2563EB;
-  outline-offset: -2px;
+  width: 100%;
+  height: 100%;
 }
 
 .shape-svg {

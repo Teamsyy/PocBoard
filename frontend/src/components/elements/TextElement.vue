@@ -1,15 +1,16 @@
 <template>
-  <Vue3DraggableResizable
-    :initW="element.w"
-    :initH="element.h"
+  <DraggableResizable
     :x="element.x"
     :y="element.y"
-    :draggable="isEditMode"
-    :resizable="isEditMode"
-    :minW="20"
-    :minH="16"
-    :parent="true"
-    :disableUserSelect="false"
+    :width="element.w"
+    :height="element.h"
+    :z-index="element.z"
+    :is-selected="isSelected"
+    :is-edit-mode="isEditMode"
+    :snap-to-grid="snapToGrid"
+    :grid-size="gridSize"
+    :min-width="20"
+    :min-height="16"
     @activated="handleActivated"
     @deactivated="handleDeactivated"
     @dragging="handleDragging"
@@ -17,7 +18,7 @@
     @drag-end="handleDragEnd"
     @resize-end="handleResizeEnd"
     class="text-element"
-    :class="{ 'edit-mode': isEditMode, 'selected': isSelected, 'text-editing': isTextEditing }"
+    :class="{ 'text-editing': isTextEditing }"
   >
     <div
       ref="textContent"
@@ -31,12 +32,12 @@
       :style="textStyle"
       v-html="payload.content"
     ></div>
-  </Vue3DraggableResizable>
+  </DraggableResizable>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
+import DraggableResizable from '../DraggableResizable.vue'
 import type { Element, TextPayload } from '@/types'
 
 interface Props {
@@ -355,33 +356,8 @@ onUnmounted(() => {
 
 <style scoped>
 .text-element {
-  position: absolute;
-  cursor: pointer;
-}
-
-.text-element.edit-mode {
-  cursor: move;
-}
-
-.text-element.edit-mode.selected {
-  cursor: text;
-}
-
-.text-element.edit-mode.selected .text-content:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.text-element.selected {
-  outline: 2px solid #2563EB;
-  outline-offset: -2px;
-}
-
-.text-element.editing {
-  z-index: 1000;
-}
-
-.text-element.text-editing {
-  z-index: 1001;
+  width: 100%;
+  height: 100%;
 }
 
 .text-element.text-editing .text-content {
@@ -395,17 +371,8 @@ onUnmounted(() => {
   padding: 2px;
   min-height: 100%;
   box-sizing: border-box;
-}
-
-.text-element.selected .text-content {
-  cursor: text;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  transition: background-color 0.2s ease;
-}
-
-.text-element.selected .text-content:hover {
-  background: rgba(255, 255, 255, 0.2);
+  width: 100%;
+  height: 100%;
 }
 
 .text-content[contenteditable="true"] {

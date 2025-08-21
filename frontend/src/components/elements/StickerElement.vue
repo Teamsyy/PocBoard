@@ -1,14 +1,16 @@
 <template>
-  <Vue3DraggableResizable
-    :initW="element.w"
-    :initH="element.h"
+  <DraggableResizable
     :x="element.x"
     :y="element.y"
-    :draggable="isEditMode"
-    :resizable="isEditMode"
-    :minW="20"
-    :minH="20"
-    :parent="true"
+    :width="element.w"
+    :height="element.h"
+    :z-index="element.z"
+    :is-selected="isSelected"
+    :is-edit-mode="isEditMode"
+    :snap-to-grid="snapToGrid"
+    :grid-size="gridSize"
+    :min-width="20"
+    :min-height="20"
     @activated="handleActivated"
     @deactivated="handleDeactivated"
     @dragging="handleDragging"
@@ -16,7 +18,6 @@
     @drag-end="handleDragEnd"
     @resize-end="handleResizeEnd"
     class="sticker-element"
-    :class="{ 'edit-mode': isEditMode, 'selected': isSelected }"
   >
     <img
       :src="payload.url"
@@ -37,12 +38,12 @@
       <div class="error-icon">😵</div>
       <div class="error-text">Sticker not found</div>
     </div>
-  </Vue3DraggableResizable>
+  </DraggableResizable>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import Vue3DraggableResizable from 'vue3-draggable-resizable'
+import DraggableResizable from '../DraggableResizable.vue'
 import type { Element, StickerPayload } from '@/types'
 
 interface Props {
@@ -151,20 +152,14 @@ onUnmounted(() => {
 
 <style scoped>
 .sticker-element {
-  position: absolute;
-  cursor: pointer;
-}
-
-.sticker-element.edit-mode {
-  cursor: move;
-}
-
-.sticker-element.selected {
-  outline: 2px solid #2563EB;
-  outline-offset: -2px;
+  width: 100%;
+  height: 100%;
 }
 
 .sticker-content {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 

@@ -1,6 +1,4 @@
-# Junk Journal & Board
-
-A private-by-URL digital journaling platform that allows users to create visual journal entries with drag-and-drop canvas editing capabilities.
+# Junk Journal Poc
 
 ## Features
 

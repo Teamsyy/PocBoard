@@ -362,27 +362,46 @@
       </aside>
     </div>
 
-    <!-- Share Modal (placeholder) -->
-    <div 
-      v-if="showShareModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click="showShareModal = false"
-    >
-      <div 
-        class="bg-white rounded-xl p-6 max-w-md w-full mx-4"
-        @click.stop
-      >
-        <h3 class="text-lg font-semibold text-amber-800 mb-4">Share Board</h3>
-        <p class="text-amber-600 text-sm mb-4">
-          Share functionality will be implemented in later tasks
-        </p>
-        <div class="flex justify-end">
-          <button @click="showShareModal = false" class="btn-secondary">
-            Close
-          </button>
+    <!-- Share Modal -->
+    <Dialog :open="showShareModal" @update:open="showShareModal = $event">
+      <DialogHeader>
+        <DialogTitle>Share Board</DialogTitle>
+        <DialogDescription>
+          Share your board with others or export it for external use.
+        </DialogDescription>
+      </DialogHeader>
+      
+      <DialogContent>
+        <div class="space-y-4">
+          <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <p class="text-amber-700 text-sm">
+              🚧 Share functionality will be implemented in later tasks
+            </p>
+          </div>
+          
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-amber-800">Public Link</label>
+            <div class="flex gap-2">
+              <input 
+                type="text" 
+                value="Coming soon..." 
+                class="flex-1 px-3 py-2 border border-amber-300 rounded-lg bg-amber-50" 
+                readonly 
+              />
+              <Button variant="outline" size="sm" disabled>
+                Copy
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+      
+      <DialogFooter>
+        <Button variant="secondary" @click="showShareModal = false">
+          Close
+        </Button>
+      </DialogFooter>
+    </Dialog>
   </div>
 
   <!-- Share and Export Bar -->
@@ -409,6 +428,15 @@ import { useRoute } from 'vue-router'
 import { useBoardsStore } from '@/stores/boards'
 import { useEditorStore } from '@/stores/editor'
 import { CanvasEditor, Toolbar, SidebarLayers, ImageUploader, SaveStatus, ShareExportBar, StickerPicker } from '@/components'
+import { 
+  Dialog, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogContent, 
+  DialogFooter, 
+  Button 
+} from '@/components/ui'
 
 interface Props {
   boardId: string

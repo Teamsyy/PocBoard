@@ -1,18 +1,10 @@
 <template>
-  <div v-if="isVisible" class="sticker-picker-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="sticker-picker bg-white rounded-lg shadow-xl w-96 max-h-[80vh] flex flex-col">
+  <Dialog :open="isVisible" @update:open="(value) => !value && $emit('close')">
+    <DialogContent class="w-96 max-h-[80vh] flex flex-col">
       <!-- Header -->
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-900">Add Sticker</h3>
-        <button 
-          @click="$emit('close')"
-          class="text-gray-400 hover:text-gray-600"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+      <DialogHeader>
+        <DialogTitle>Add Sticker</DialogTitle>
+      </DialogHeader>
 
       <!-- Tabs -->
       <div class="px-6 pt-4">
@@ -54,7 +46,7 @@
               @dragenter.prevent
               :class="[
                 'border-2 border-dashed rounded-lg p-8 text-center transition-colors',
-                isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                isDragOver ? 'border-amber-500 bg-amber-50' : 'border-gray-300'
               ]"
             >
               <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 24 24">
@@ -64,7 +56,7 @@
                 <span class="font-medium">Drop your sticker here</span> or
                 <button 
                   @click="triggerFileInput"
-                  class="text-blue-600 hover:text-blue-500"
+                  class="text-amber-600 hover:text-amber-500"
                 >
                   browse files
                 </button>
@@ -108,7 +100,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <select 
                   v-model="uploadCategory"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="custom">Custom</option>
                   <option value="emoji">Emoji</option>
@@ -129,7 +121,7 @@
                   'w-full px-4 py-2 rounded-md font-medium',
                   isUploading 
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-amber-600 text-white hover:bg-amber-700'
                 ]"
               >
                 {{ isUploading ? 'Uploading...' : 'Upload & Add Sticker' }}
@@ -145,7 +137,7 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
             <select 
               v-model="selectedCategory"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="all">All Categories</option>
               <option value="emoji">Emoji</option>
@@ -164,7 +156,7 @@
               v-for="sticker in filteredPresets"
               :key="sticker.id"
               @click="selectPresetSticker(sticker)"
-              class="aspect-square p-2 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+              class="aspect-square p-2 border border-gray-200 rounded-lg hover:border-amber-500 hover:bg-amber-50 transition-colors"
               :title="sticker.name"
             >
               <img 
@@ -184,13 +176,17 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { StickerUploadService } from '@/api/stickers'
+import Dialog from '@/components/ui/Dialog.vue'
+import DialogContent from '@/components/ui/DialogContent.vue'
+import DialogHeader from '@/components/ui/DialogHeader.vue'
+import DialogTitle from '@/components/ui/DialogTitle.vue'
 
 interface Props {
   isVisible: boolean
@@ -394,14 +390,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.sticker-picker-overlay {
-  backdrop-filter: blur(4px);
-}
-
-.sticker-picker {
-  max-width: 90vw;
-}
-
 /* Custom scrollbar for sticker grid */
 .max-h-64::-webkit-scrollbar {
   width: 6px;

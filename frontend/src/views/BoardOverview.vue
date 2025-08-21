@@ -123,136 +123,132 @@
     </div>
 
     <!-- Create Board Modal -->
-    <div v-if="showCreateModal" class="modal-overlay" @click="showCreateModal = false">
-      <div class="modal-container" @click.stop>
-        <div class="modal-header">
-          <div class="modal-icon">
-            <svg class="w-12 h-12 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-          </div>
-          <h3 class="modal-title">Create New Board</h3>
-          <p class="modal-description">
-            Give your new board a name and description to get started with your creative journey.
-          </p>
+    <Dialog :open="showCreateModal" @update:open="showCreateModal = $event">
+      <DialogHeader>
+        <div class="modal-icon">
+          <svg class="w-12 h-12 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
         </div>
-        
-        <div class="modal-content">
-          <div class="form-group">
-            <label for="board-title" class="form-label">Board Name *</label>
-            <input
-              id="board-title"
-              v-model="newBoardTitle"
-              type="text"
-              class="form-input"
-              placeholder="Enter board name..."
-              maxlength="100"
-              @keyup.enter="confirmCreateBoard"
-              :disabled="createLoading"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="board-description" class="form-label">Description (Optional)</label>
-            <textarea
-              id="board-description"
-              v-model="newBoardDescription"
-              class="form-textarea"
-              placeholder="Describe what this board is for..."
-              rows="3"
-              maxlength="500"
-              :disabled="createLoading"
-            ></textarea>
-          </div>
-          
-          <div class="character-count">
-            <span class="count-text">{{ newBoardTitle.length }}/100</span>
-          </div>
-        </div>
-        
-        <div class="modal-actions">
-          <button 
-            @click="showCreateModal = false" 
-            class="modal-btn modal-btn-secondary"
+        <DialogTitle>Create New Board</DialogTitle>
+        <DialogDescription>
+          Give your new board a name and description to get started with your creative journey.
+        </DialogDescription>
+      </DialogHeader>
+      
+      <DialogContent>
+        <div class="form-group">
+          <label for="board-title" class="form-label">Board Name *</label>
+          <input
+            id="board-title"
+            v-model="newBoardTitle"
+            type="text"
+            class="form-input"
+            placeholder="Enter board name..."
+            maxlength="100"
+            @keyup.enter="confirmCreateBoard"
             :disabled="createLoading"
-          >
-            Cancel
-          </button>
-          <button 
-            @click="confirmCreateBoard" 
-            class="modal-btn modal-btn-primary"
-            :disabled="createLoading || !newBoardTitle.trim()"
-          >
-            <svg v-if="createLoading" class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            {{ createLoading ? 'Creating...' : 'Create Board' }}
-          </button>
+          />
         </div>
-      </div>
-    </div>
+        
+        <div class="form-group">
+          <label for="board-description" class="form-label">Description (Optional)</label>
+          <textarea
+            id="board-description"
+            v-model="newBoardDescription"
+            class="form-textarea"
+            placeholder="Describe what this board is for..."
+            rows="3"
+            maxlength="500"
+            :disabled="createLoading"
+          ></textarea>
+        </div>
+        
+        <div class="character-count">
+          <span class="count-text">{{ newBoardTitle.length }}/100</span>
+        </div>
+      </DialogContent>
+      
+      <DialogFooter>
+        <Button 
+          variant="secondary" 
+          @click="showCreateModal = false"
+          :disabled="createLoading"
+        >
+          Cancel
+        </Button>
+        <Button 
+          variant="default" 
+          @click="confirmCreateBoard"
+          :disabled="createLoading || !newBoardTitle.trim()"
+        >
+          <svg v-if="createLoading" class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          {{ createLoading ? 'Creating...' : 'Create Board' }}
+        </Button>
+      </DialogFooter>
+    </Dialog>
 
     <!-- Delete All Modal -->
-    <div v-if="showDeleteAllModal" class="modal-overlay" @click="showDeleteAllModal = false">
-      <div class="modal-container" @click.stop>
-        <div class="modal-header">
-          <div class="modal-icon">
-            <svg class="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 6.5c-.77.833-.192 2.5 1.732 2.5z"></path>
-            </svg>
-          </div>
-          <h3 class="modal-title">Delete All Boards</h3>
-          <p class="modal-description">
-            Are you absolutely sure you want to delete all {{ boards.length }} boards? This action cannot be undone and will permanently remove all your boards and their content.
-          </p>
+    <Dialog :open="showDeleteAllModal" @update:open="showDeleteAllModal = $event">
+      <DialogHeader>
+        <div class="modal-icon">
+          <svg class="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 6.5c-.77.833-.192 2.5 1.732 2.5z"></path>
+          </svg>
         </div>
-        
-        <div class="modal-content">
-          <div class="boards-preview">
-            <div class="preview-title">Boards to be deleted:</div>
-            <div class="marquee">
-              <div class="marquee-content">
-                <span v-for="board in boards" :key="board.id" class="board-chip">
-                  {{ board.title }}
-                </span>
-                <!-- Duplicate for seamless loop -->
-                <span v-for="board in boards" :key="`duplicate-${board.id}`" class="board-chip">
-                  {{ board.title }}
-                </span>
-              </div>
+        <DialogTitle>Delete All Boards</DialogTitle>
+        <DialogDescription>
+          Are you absolutely sure you want to delete all {{ boards.length }} boards? This action cannot be undone and will permanently remove all your boards and their content.
+        </DialogDescription>
+      </DialogHeader>
+      
+      <DialogContent>
+        <div class="boards-preview">
+          <div class="preview-title">Boards to be deleted:</div>
+          <div class="marquee">
+            <div class="marquee-content">
+              <span v-for="board in boards" :key="board.id" class="board-chip">
+                {{ board.title }}
+              </span>
+              <!-- Duplicate for seamless loop -->
+              <span v-for="board in boards" :key="`duplicate-${board.id}`" class="board-chip">
+                {{ board.title }}
+              </span>
             </div>
           </div>
         </div>
-        
-        <div class="modal-actions">
-          <button 
-            @click="showDeleteAllModal = false" 
-            class="modal-btn modal-btn-secondary"
-            :disabled="deleteAllLoading"
-          >
-            Cancel
-          </button>
-          <button 
-            @click="deleteAllBoards" 
-            class="modal-btn modal-btn-danger"
-            :disabled="deleteAllLoading"
-          >
-            <svg v-if="deleteAllLoading" class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-            </svg>
-            {{ deleteAllLoading ? 'Deleting...' : 'Delete All Boards' }}
-          </button>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+      
+      <DialogFooter>
+        <Button 
+          variant="secondary" 
+          @click="showDeleteAllModal = false"
+          :disabled="deleteAllLoading"
+        >
+          Cancel
+        </Button>
+        <Button 
+          variant="destructive" 
+          @click="deleteAllBoards"
+          :disabled="deleteAllLoading"
+        >
+          <svg v-if="deleteAllLoading" class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+          {{ deleteAllLoading ? 'Deleting...' : 'Delete All Boards' }}
+        </Button>
+      </DialogFooter>
+    </Dialog>
   </div>
 </template>
 
@@ -261,6 +257,15 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { boardsApi, type CreateBoardRequest } from '@/api/boards'
 import type { Board } from '@/types'
+import { 
+  Dialog, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogContent, 
+  DialogFooter, 
+  Button 
+} from '@/components/ui'
 
 const router = useRouter()
 

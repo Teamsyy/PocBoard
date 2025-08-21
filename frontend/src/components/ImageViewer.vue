@@ -1,18 +1,10 @@
 <template>
-  <div v-if="isVisible" class="image-viewer-overlay fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" @click="closeViewer">
-    <div class="image-viewer-modal bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl" @click.stop>
+  <Dialog :open="isVisible" @update:open="(value) => !value && $emit('close')">
+    <DialogContent class="max-w-4xl max-h-[90vh] w-full mx-4 overflow-hidden">
       <!-- Header -->
-      <div class="flex items-center justify-between p-4 border-b">
-        <h3 class="text-lg font-semibold text-gray-900">Image Details</h3>
-        <button 
-          @click="closeViewer"
-          class="text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+      <DialogHeader>
+        <DialogTitle>Image Details</DialogTitle>
+      </DialogHeader>
 
       <!-- Content -->
       <div class="p-6">
@@ -58,7 +50,7 @@
               @keydown.escape="cancelEditingDescription"
               @keydown.ctrl.enter="saveDescription"
               @keydown.meta.enter="saveDescription"
-              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 resize-none"
               rows="4"
               placeholder="Enter a description for this image..."
             />
@@ -71,7 +63,7 @@
               </button>
               <button 
                 @click="saveDescription"
-                class="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
+                class="px-4 py-2 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition-colors"
               >
                 Save
               </button>
@@ -83,13 +75,17 @@
           </p>
         </div>
       </div>
-    </div>
-  </div>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, nextTick, watch } from 'vue'
 import type { ImagePayload } from '@/types'
+import Dialog from '@/components/ui/Dialog.vue'
+import DialogContent from '@/components/ui/DialogContent.vue'
+import DialogHeader from '@/components/ui/DialogHeader.vue'
+import DialogTitle from '@/components/ui/DialogTitle.vue'
 
 interface Props {
   isVisible: boolean
@@ -127,10 +123,6 @@ watch(() => props.isVisible, (visible) => {
   }
 })
 
-const closeViewer = () => {
-  emit('close')
-}
-
 const handleSingleClick = (event: MouseEvent) => {
   event.preventDefault()
   event.stopPropagation()
@@ -165,25 +157,6 @@ const saveDescription = () => {
 </script>
 
 <style scoped>
-.image-viewer-overlay {
-  backdrop-filter: blur(4px);
-}
-
-.image-viewer-modal {
-  animation: slideIn 0.2s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
 /* Ensure textarea doesn't resize horizontally */
 textarea {
   resize: vertical;

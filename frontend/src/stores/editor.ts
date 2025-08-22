@@ -582,8 +582,21 @@ export const useEditorStore = defineStore('editor', () => {
     selectedElementIds.value.forEach(async (elementId) => {
       const element = elements.value.find(el => el.id === elementId)
       if (element) {
-        const minZ = Math.min(...elements.value.map(el => el.z))
-        await updateElement(element.id, { z: minZ - 1 })
+        // Get all other elements (excluding the one being sent to back)
+        const otherElements = elements.value.filter(el => el.id !== elementId)
+        
+        if (otherElements.length > 0) {
+          // Set this element to z-index 1
+          await updateElement(element.id, { z: 1 })
+          
+          // Increment all other elements' z-index by 1 to maintain order
+          for (const otherElement of otherElements) {
+            await updateElement(otherElement.id, { z: otherElement.z + 1 })
+          }
+        } else {
+          // If it's the only element, just set it to z-index 1
+          await updateElement(element.id, { z: 1 })
+        }
       }
     })
   }

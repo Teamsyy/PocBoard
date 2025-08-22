@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { boardsApi, pagesApi } from '@/api'
+import { setTokenGetter } from '@/api/client'
 import type { Board, Page } from '@/types'
 
 export const useBoardsStore = defineStore('boards', () => {
@@ -11,6 +12,9 @@ export const useBoardsStore = defineStore('boards', () => {
   const publicToken = ref<string | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  // Register token getter with API client
+  setTokenGetter(() => editToken.value)
 
   // Watch pages to ensure it's always an array
   watch(pages, (newPages: any) => {

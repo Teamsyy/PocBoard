@@ -242,19 +242,25 @@ const handleTextBlur = (event: FocusEvent) => {
   // Don't exit edit mode if clicking on toolbar, panels, or other UI elements
   if (relatedTarget && (
     relatedTarget.closest('.toolbar') ||
+    relatedTarget.closest('.toolbar-group') ||
+    relatedTarget.closest('.toolbar-select') ||
+    relatedTarget.closest('.toolbar-btn') ||
+    relatedTarget.closest('.toolbar-color-input') ||
     relatedTarget.closest('.sidebar') ||
     relatedTarget.closest('.panel') ||
     relatedTarget.closest('[data-ui-panel]') ||
     relatedTarget.closest('button') ||
     relatedTarget.closest('select') ||
-    relatedTarget.closest('input')
+    relatedTarget.closest('input') ||
+    relatedTarget.tagName === 'SELECT' ||
+    relatedTarget.tagName === 'OPTION'
   )) {
-    // Refocus the text content after a short delay
+    // Refocus the text content after a short delay to maintain text editing mode
     setTimeout(() => {
       if (textContent.value && isTextEditing.value) {
         textContent.value.focus()
       }
-    }, 10)
+    }, 50) // Increased delay to allow dropdown interaction
     return
   }
   

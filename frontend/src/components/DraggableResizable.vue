@@ -89,7 +89,8 @@ const elementStyle = computed(() => ({
   top: `${currentY.value}px`,
   width: `${currentWidth.value}px`,
   height: `${currentHeight.value}px`,
-  zIndex: props.zIndex,
+  // Limit z-index to ensure toolbar always stays above canvas elements
+  zIndex: Math.min(props.zIndex, 999),
   userSelect: isDragging.value || isResizing.value ? ('none' as const) : ('auto' as const)
 }))
 

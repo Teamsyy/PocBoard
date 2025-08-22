@@ -2,6 +2,13 @@ import axios from 'axios'
 import type { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
 import type { ApiResponse } from '@/types'
 
+// Function to get edit token from store - will be set by store initialization
+let getStoredEditToken: (() => string | null) | null = null
+
+export const setTokenGetter = (getter: () => string | null) => {
+  getStoredEditToken = getter
+}
+
 // Create axios instance with base configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
@@ -16,9 +23,14 @@ apiClient.interceptors.request.use(
   (config) => {
     console.log('API Request:', config.method?.toUpperCase(), config.url, config.data)
     
-    // Get edit token from URL params or stored state
+    // Get edit token from URL params first, then try stored state
     const urlParams = new URLSearchParams(window.location.search)
-    const editToken = urlParams.get('edit_token')
+    let editToken = urlParams.get('edit_token')
+    
+    // If no token in URL, try to get it from the boards store
+    if (!editToken && getStoredEditToken) {
+      editToken = getStoredEditToken()
+    }
     
     if (editToken && config.params) {
       config.params.edit_token = editToken

@@ -305,12 +305,21 @@ const sendToBack = () => {
 </script>
 
 <style scoped>
+.toolbar {
+  /* High z-index to ensure toolbar stays above canvas elements */
+  z-index: 1000;
+  position: relative;
+}
+
 .toolbar-group {
   display: flex;
   align-items: center;
   border: 1px solid #f3e8ff;
   border-radius: 0.375rem;
   background-color: white;
+  /* Ensure dropdown menus appear above everything */
+  position: relative;
+  z-index: 1001;
 }
 
 .toolbar-btn {
@@ -354,10 +363,15 @@ const sendToBack = () => {
   color: #d97706;
   outline: none;
   min-width: 80px;
+  /* Ensure dropdowns appear above canvas elements */
+  position: relative;
+  z-index: 1002;
 }
 
 .toolbar-select:focus {
   background-color: #fef3c7;
+  /* Boost z-index when dropdown is open */
+  z-index: 1003;
 }
 
 .toolbar-select:first-child {
